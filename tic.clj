@@ -74,10 +74,8 @@
 (defn make-move [board tile x y]
   (map-indexed (fn [i row]
                  (if (= i x)
-                   (vec (map-indexed (fn [k el]
-                                       (if (= k y)
-                                         tile
-                                         el)) 
-                                     row)) 
+                   (vec (map-indexed 
+                          (fn [k el] (if (= k y) tile el)) 
+                          row)) 
                    row)) 
                board))
