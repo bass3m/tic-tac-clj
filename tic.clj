@@ -49,7 +49,7 @@
 (defn mark-move [board tile x y]
   (loop [row  (vec (first board)), rest-vec (vec (next board))
          prev-vec [] , x x]
-    (if (empty? row)
+    (if (nil? row)
       prev-vec ; this shouldn't happen
       (if (zero? x)
         (conj prev-vec (conj [(assoc row y tile)] rest-vec))
@@ -58,12 +58,6 @@
 (defn make-move [board size tile x y]
   ; change board back to a vector
   (map (partial into []) (partition size size (flatten (mark-move board tile x y)))))
-
-; returns a sequential vector with the passed in index removed
-; XXX simpler with iterate perhaps
-(defn rem-idx-from-vec [size i]
-  (vec (flatten (for [x (range size) :when (not= x i)]
-                  [(conj (vector-of :int) x)]))))
 
 (defn rem-idx-from-vec [size i]
   (vec (keep-indexed #(if (not= %1 i) %2) (range size))))
@@ -76,3 +70,14 @@
   (let [idx-vec (rem-idx-from-vec (count board) x)]
     (replace (conj (replace board idx-vec) 
                    (assoc (board x) y tile)) (conj idx-vec x))))
+
+(defn make-move [board tile x y]
+  (map-indexed (fn [i row]
+                 (if (= i x)
+                   (vec (map-indexed (fn [k el]
+                                       (if (= k y)
+                                         tile
+                                         el)) 
+                                     row)) 
+                   row)) 
+               board))
