@@ -64,6 +64,10 @@
 (defn rem-idx-from-vec [size i]
   (vec (flatten (for [x (range size) :when (not= x i)]
                   [(conj (vector-of :int) x)]))))
+
+(defn rem-idx-from-vec [size i]
+  (vec (keep-indexed #(if (not= %1 i) %2) (range size))))
+
 ; [0 2]
 ;(replace (conj (replace gm [0 2]) (assoc (gm 1) 2 "x")) [0 2 1])
 ; [[0 1 2] [3 4 "x"] [6 7 8]]
