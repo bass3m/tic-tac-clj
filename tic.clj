@@ -45,20 +45,8 @@
 (defn first-move [{board :board tile :my-tile}]
   (conj (rest board) (assoc (board 0) 0 tile)))
 
-(defn make-move [board tile x y]
-  (loop [row  (first board), rest-vec (next board) , x x]
-    (if (empty? row)
-      rest-vec ; this shouldn't happen
-      (if (neg? x)
-        (conj rest-vec (assoc row y tile))
-        (recur (first (next rest-vec)) (conj rest-vec row) (dec x))))))
-
-(defn make-move []
-  ; change board back to a vector
-  (map (partial into []) (partition size size (flatten 
-; (vec (partition 3 3 (make-move gm "x" 2 1)))
-; [(0 1 2) (3 4 5) (6 "x" 8)]
-(defn make-move [board tile x y]
+; XXX not very proud of this at all, needs cleanup
+(defn mark-move [board tile x y]
   (loop [row  (vec (first board)), rest-vec (vec (next board))
          prev-vec [] , x x]
     (if (empty? row)
@@ -66,9 +54,10 @@
       (if (zero? x)
         (conj prev-vec (conj [(assoc row y tile)] rest-vec))
         (recur (first rest-vec) (next rest-vec) (conj prev-vec row) (dec x))))))
-        ;(recur (vec (first rest-vec)) (vec (next rest-vec)) (conj prev-vec row) (dec x))))))
-        ;(conj prev-vec (vec (drop-while empty? (conj [(assoc row y tile)] rest-vec))))
-        ;(flatten (conj prev-vec (vec (drop-while empty? (conj [(assoc row y tile)] rest-vec)))))
+
+(defn make-move [board size tile x y]
+  ; change board back to a vector
+  (map (partial into []) (partition size size (flatten (mark-move board tile x y)))))
 
 ; returns a sequential vector with the passed in index removed
 ; XXX simpler with iterate perhaps
@@ -83,19 +72,3 @@
   (let [idx-vec (rem-idx-from-vec (count board) x)]
     (replace (conj (replace board idx-vec) 
                    (assoc (board x) y tile)) (conj idx-vec x))))
-
-; ugly
-(defn make-move [board tile x y]
-  (loop [row  (vec (first board))
-         rest-vec (vec (next board))
-         new-board [] , x x]
-    (if (empty? row) ; we shouldn't have empty rows
-      new-board ; this shouldn't happen
-      (if (empty? rest-vec) ; we reached the end
-        new-board ; return the new board with the move made
-        (if (zero? x) ; is this the row that we need to make the move in ?
-            (recur (vec (first rest-vec)) 
-                   (vec (next rest-vec)) 
-                   (vec (conj new-board [(assoc row y tile)]))
-                   (dec x))
-            (recur (vec (first rest-vec)) (vec (next rest-vec)) (conj new-board row) (dec x)))))))
