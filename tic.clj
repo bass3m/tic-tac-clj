@@ -45,37 +45,34 @@
 (defn first-move [{board :board tile :my-tile}]
   (conj (rest board) (assoc (board 0) 0 tile)))
 
-; XXX not very proud of this at all, needs cleanup
+; ugh, or
+; (assoc-in gm [0 1] "x")
+; [[0 "x" 2] [3 4 5] [6 7 8]]
+
 (defn mark-move [board tile x y]
-  (loop [row  (vec (first board)), rest-vec (vec (next board))
-         prev-vec [] , x x]
-    (if (nil? row)
-      prev-vec ; this shouldn't happen
-      (if (zero? x)
-        (conj prev-vec (conj [(assoc row y tile)] rest-vec))
-        (recur (first rest-vec) (next rest-vec) (conj prev-vec row) (dec x))))))
-
-(defn make-move [board size tile x y]
-  ; change board back to a vector
-  (map (partial into []) (partition size size (flatten (mark-move board tile x y)))))
-
-(defn rem-idx-from-vec [size i]
-  (vec (keep-indexed #(if (not= %1 i) %2) (range size))))
-
-; [0 2]
-;(replace (conj (replace gm [0 2]) (assoc (gm 1) 2 "x")) [0 2 1])
-; [[0 1 2] [3 4 "x"] [6 7 8]]
-; changing 1 2
-(defn make-move [board tile x y]
-  (let [idx-vec (rem-idx-from-vec (count board) x)]
-    (replace (conj (replace board idx-vec) 
-                   (assoc (board x) y tile)) (conj idx-vec x))))
-
-(defn make-move [board tile x y]
   (map-indexed (fn [i row]
                  (if (= i x)
-                   (vec (map-indexed 
-                          (fn [k el] (if (= k y) tile el)) 
-                          row)) 
-                   row)) 
+                   (vec (map-indexed (fn [k el] (if (= k y) tile el)) row))
+                   row))
                board))
+
+; modified from Joy of Clojure to include diagonals
+(defn neighbors
+  ([size yx] (neighbors [[-1 0] [1 0] [0 -1] [0 1] 
+                         [1 1] [-1 -1] [-1 1] [1 -1]] size yx))
+  ([deltas size yx]
+   (filter (fn [new-yx]
+             (every? #(< -1 % size) new-yx))
+           (map #(vec (map + yx %)) deltas))))
+
+;(map #(get-in gm %) (neighbors 3 [0 0]))
+;=> (3 1 4)
+(defn get-two-in-a-row [board x y]
+  (let [current-tile ((board x) y)
+        my-neighbors (neighbors (count board) [x y])]
+    (filter #(if (= current-tile (get-in board %)) %) my-neighbors)))
+
+(defn two-in-a-row? [board x y]
+  (not (empty? (get-two-in-a-row board x y))))
+
+
