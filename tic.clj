@@ -1,10 +1,12 @@
 (ns tic-tac-toe)
 
 (defn create-board [size]
-  {:board (vec (repeat size (vec (repeat size (identity "_")))))
-   :tile-values ["_" "X" "O"]
-   :size size
-   :my-tile "X"})
+  (let [my-turn (rand-int 2)]
+    {:board (vec (repeat size (vec (repeat size (identity "_")))))
+     :tile-values ["_" "X" "O"]
+     :size size
+     :my-tile (if (zero? my-turn) "X" "O")
+     :my-turn (if (zero? my-turn) "First" "Second")}))
 
 (defn get-columns [board]
   (vec (apply map vector board)))
@@ -41,10 +43,6 @@
 (defn win? [{board :board}]
   (check-board-matches board))
 
-; this is the first move, the optimal move is to choose a corner
-(defn first-move [{board :board tile :my-tile}]
-  (conj (rest board) (assoc (board 0) 0 tile)))
-
 ; ugh, or
 ; (assoc-in gm [0 1] "x")
 ; [[0 "x" 2] [3 4 5] [6 7 8]]
@@ -67,6 +65,8 @@
 
 ;(map #(get-in gm %) (neighbors 3 [0 0]))
 ;=> (3 1 4)
+
+; get the two i a row neighbors for this location
 (defn get-two-in-a-row [board x y]
   (let [current-tile ((board x) y)
         my-neighbors (neighbors (count board) [x y])]
@@ -75,4 +75,32 @@
 (defn two-in-a-row? [board x y]
   (not (empty? (get-two-in-a-row board x y))))
 
+; XXX this assumes a size 3 board, but what do you do for larger ?
+(defn get-center [board]
+  ((board 1) 1))
+
+(defn get-corners [board]
+  (for [x [0 (- (count board) 1)] y [0 (- (count board) 1)]] [x y]))
+    
+(defn get-played-corners [board tile]
+  (filter #(if (= tile (get-in board %)) %) (get-corners board)))
+
+(defn first-move [{:keys [board my-tile my-turn]}]
+  (if (= my-turn "First")
+    ; this is the first move, the optimal move is to choose a corner
+    ;(conj (rest board) (assoc (board 0) 0 my-tile))
+    (assoc-in board [0 0] my-tile)
+    ; i go second, 3 options:
+    (cond
+      ; if other player played center, then play corner
+      (= "X" (get-center board)) (assoc-in board [0 0] my-tile)
+      ;(= "X" (get-center board)) (conj (rest board) (assoc (board 0) 0 my-tile))
+      ; if other player played a corner, then play center
+      (not (empty? (get-played-corners board "X"))) (assoc-in board [1 1] my-tile)
+      ; else other player played edge, then just play center
+      :else (assoc-in board [1 1] my-tile))))
+
+
+; this is not a first move
+(defn next-move [board]
 
