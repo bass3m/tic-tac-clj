@@ -5,6 +5,8 @@
     {:board (vec (repeat size (vec (repeat size (identity "_")))))
      :tile-values ["_" "X" "O"]
      :size size
+     :my-moves []
+     :op-moves []
      :my-tile (if (zero? my-turn) "X" "O")
      :my-turn (if (zero? my-turn) "First" "Second")}))
 
@@ -56,7 +58,7 @@
 
 ; modified from Joy of Clojure to include diagonals
 (defn neighbors
-  ([size yx] (neighbors [[-1 0] [1 0] [0 -1] [0 1] 
+  ([size yx] (neighbors [[-1 0] [1 0] [0 -1] [0 1]
                          [1 1] [-1 -1] [-1 1] [1 -1]] size yx))
   ([deltas size yx]
    (filter (fn [new-yx]
@@ -75,17 +77,31 @@
 (defn two-in-a-row? [board x y]
   (not (empty? (get-two-in-a-row board x y))))
 
+(defn get-two-in-a-row [board x y] 
+   (let [current-tile ((board x) y)
+         my-neighbors (neighbors (count board) [x y])]
+     (filter #(= current-tile (get-in board %)) my-neighbors)))
+     ;(filter #(if (= current-tile (get-in board %)) {:tile current-tile :loc %}) my-neighbors)))
+
+; needs fixing XXX
+(defn get-two-in-a-row
+  ([board x y] (get-two-in-a-row board x y ((board x) y)))
+  ([board x y current-tile]
+   (let [my-neighbors (neighbors (count board) [x y])]
+     (filter #(if (= current-tile (get-in board %)) %) my-neighbors))))
+
 ; XXX this assumes a size 3 board, but what do you do for larger ?
 (defn get-center [board]
   ((board 1) 1))
 
 (defn get-corners [board]
   (for [x [0 (- (count board) 1)] y [0 (- (count board) 1)]] [x y]))
-    
+
 (defn get-played-corners [board tile]
   (filter #(if (= tile (get-in board %)) %) (get-corners board)))
 
 (defn first-move [{:keys [board my-tile my-turn]}]
+  ; i go first ?
   (if (= my-turn "First")
     ; this is the first move, the optimal move is to choose a corner
     ;(conj (rest board) (assoc (board 0) 0 my-tile))
@@ -100,7 +116,12 @@
       ; else other player played edge, then just play center
       :else (assoc-in board [1 1] my-tile))))
 
+; return all the two-in-a-rows on the board
+(defn get-board-two-in-a-rows [board]
+  (for [x (range (count board)) y (range (count board))
+        :when (not (empty? (get-two-in-a-row board x y)))] [x y]))
 
-; this is not a first move
-(defn next-move [board]
-
+; do the next move after opening moves are done
+(defn next-move [{:keys [board my-tile my-turn]}]
+  ; do i have a 2-in-a-row ?, if so then win it
+  ; does other player have 2-in-a-row ? block that
