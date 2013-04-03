@@ -81,14 +81,13 @@
    (let [current-tile ((board x) y)
          my-neighbors (neighbors (count board) [x y])]
      (filter #(= current-tile (get-in board %)) my-neighbors)))
-     ;(filter #(if (= current-tile (get-in board %)) {:tile current-tile :loc %}) my-neighbors)))
 
 ; needs fixing XXX
 (defn get-two-in-a-row
   ([board x y] (get-two-in-a-row board x y ((board x) y)))
   ([board x y current-tile]
    (let [my-neighbors (neighbors (count board) [x y])]
-     (filter #(if (= current-tile (get-in board %)) %) my-neighbors))))
+     (filter #(= current-tile (get-in board %)) my-neighbors))))
 
 ; XXX this assumes a size 3 board, but what do you do for larger ?
 (defn get-center [board]
@@ -116,10 +115,27 @@
       ; else other player played edge, then just play center
       :else (assoc-in board [1 1] my-tile))))
 
+(vector (map first twobyes))
+(interleave (map :tile (map first twobyes)) (map :loc (map first twobyes)))
+
+; XXX i'm sure there is a clojure ftn that does this better,
+; not really proud of this
+(defn group-player-moves
+  ([moves] (group-player-moves moves {}))
+  ([moves player-moves] (if (empty? moves)
+                          player-moves
+                          (let [move (first moves)]
+                            (group-player-moves (rest moves) 
+                              (update-in player-moves 
+                                         [(:tile move)] 
+                                         (partial conj [(:loc move)])))))))
+
 ; return all the two-in-a-rows on the board
 (defn get-board-two-in-a-rows [board]
   (for [x (range (count board)) y (range (count board))
-        :when (not (empty? (get-two-in-a-row board x y)))] [x y]))
+        :when (not (empty? (get-two-in-a-row board x y)))] 
+    {:tile ((board x) y) :loc [x y]}))
+        ;:when (not (empty? (get-two-in-a-row board x y)))] [x y]))
 
 ; do the next move after opening moves are done
 (defn next-move [{:keys [board my-tile my-turn]}]
