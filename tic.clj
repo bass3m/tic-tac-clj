@@ -10,6 +10,9 @@
      :my-tile (if (zero? my-turn) "X" "O")
      :my-turn (if (zero? my-turn) "First" "Second")}))
 
+(defn get-op-tile [my-tile]
+  (if (= my-tile "X") "O" "X"))
+
 (defn get-columns [board]
   (vec (apply map vector board)))
 
@@ -69,25 +72,47 @@
 ;=> (3 1 4)
 
 ; get the two i a row neighbors for this location
+;(defn get-two-in-a-row [board x y]
+  ;(let [current-tile ((board x) y)
+        ;my-neighbors (neighbors (count board) [x y])]
+    ;(filter #(if (= current-tile (get-in board %)) %) my-neighbors)))
+
+; pass in the values to check for non-consective matches
+(defn non-consec-two-in-a-row? [[x y z]]
+  (and (= x z) (= y "_")))
+
+(defn get-non-consec-twos [board]
+  ; check row matches
+  (if-let [row-matches (filter non-consec-two-in-a-row? board)]
+    row-matches
+    ; now check columns
+    (if-let [colmn-matches
+             (filter non-consec-two-in-a-row? (get-columns board))]
+      colmn-matches
+      ; check main diagonal
+      (if-let [main-diag-matches
+               (filter non-consec-two-in-a-row? (main-diag-values board))]
+        main-diag-matches
+        ; check minor diagonal
+        (if-let [minor-diag-matches
+                 (filter non-consec-two-in-a-row? (minor-diag-values board))]
+          minor-diag-matches
+          nil)))))
+
 (defn get-two-in-a-row [board x y]
-  (let [current-tile ((board x) y)
-        my-neighbors (neighbors (count board) [x y])]
-    (filter #(if (= current-tile (get-in board %)) %) my-neighbors)))
-
-(defn two-in-a-row? [board x y]
-  (not (empty? (get-two-in-a-row board x y))))
-
-(defn get-two-in-a-row [board x y] 
    (let [current-tile ((board x) y)
          my-neighbors (neighbors (count board) [x y])]
      (filter #(= current-tile (get-in board %)) my-neighbors)))
 
 ; needs fixing XXX
-(defn get-two-in-a-row
-  ([board x y] (get-two-in-a-row board x y ((board x) y)))
-  ([board x y current-tile]
-   (let [my-neighbors (neighbors (count board) [x y])]
-     (filter #(= current-tile (get-in board %)) my-neighbors))))
+;(defn get-two-in-a-row
+  ;([board x y] (get-two-in-a-row board x y ((board x) y)))
+  ;([board x y current-tile]
+   ;(let [my-neighbors (neighbors (count board) [x y])]
+     ;(filter #(= current-tile (get-in board %)) my-neighbors))))
+
+(defn two-in-a-row? [board x y]
+  (not (empty? (get-two-in-a-row board x y))))
 
 ; XXX this assumes a size 3 board, but what do you do for larger ?
 (defn get-center [board]
@@ -115,29 +140,35 @@
       ; else other player played edge, then just play center
       :else (assoc-in board [1 1] my-tile))))
 
-(vector (map first twobyes))
-(interleave (map :tile (map first twobyes)) (map :loc (map first twobyes)))
-
 ; XXX i'm sure there is a clojure ftn that does this better,
 ; not really proud of this
 (defn group-player-moves
   ([moves] (group-player-moves moves {}))
   ([moves player-moves] (if (empty? moves)
                           player-moves
-                          (let [move (first moves)]
-                            (group-player-moves (rest moves) 
-                              (update-in player-moves 
-                                         [(:tile move)] 
-                                         (partial conj [(:loc move)])))))))
+                          (let [move (first moves)
+                                loc (:loc move)
+                                tile (:tile move)]
+                            (group-player-moves (rest moves)
+                              (update-in player-moves [tile] (partial cons loc)))))))
 
 ; return all the two-in-a-rows on the board
+; XXX needs to also handle the case with the empty gap in middle
 (defn get-board-two-in-a-rows [board]
   (for [x (range (count board)) y (range (count board))
-        :when (not (empty? (get-two-in-a-row board x y)))] 
+        :when (not (empty? (get-two-in-a-row board x y)))]
     {:tile ((board x) y) :loc [x y]}))
-        ;:when (not (empty? (get-two-in-a-row board x y)))] [x y]))
 
 ; do the next move after opening moves are done
-(defn next-move [{:keys [board my-tile my-turn]}]
-  ; do i have a 2-in-a-row ?, if so then win it
-  ; does other player have 2-in-a-row ? block that
+(defn next-move [{:keys [board my-tile my-turn] :as game}]
+  (let [board-2-in-a-rows (get-board-two-in-a-rows board)
+        my-2-in-a-rows (board-2-in-a-rows my-tile)
+        op-2-in-a-rows (board-2-in-a-rows (get-op-tile my-tile))]
+    (cond
+      ; do i have a 2-in-a-row ?, if so then win it
+      (not (empty? my-2-in-a-rows)) (win-game game my-2-in-a-rows)
+      ; does other player have 2-in-a-row ? block that
+      (not (empty? op-2-in-a-rows)) (block-2-in-a-row game op-2-in-a-rows)
+      ; fork works if i started first and opp played a corner in response
+      ; to my corner, leaving center empty. I can then fork by playing
+      ; another corner which will lead to me winning
