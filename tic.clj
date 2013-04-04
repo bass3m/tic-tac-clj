@@ -78,8 +78,9 @@
     ;(filter #(if (= current-tile (get-in board %)) %) my-neighbors)))
 
 ; pass in the values to check for non-consective matches
-(defn non-consec-two-in-a-row? [[x y z]]
-  (and (= x z) (= y "_")))
+(defn non-consec-two-in-a-row? 
+  ([[x y z]] (and (= x z) (= y "_")))
+  ([[x y z] tile] (and (= x z tile) (= y "_"))))
 
 (defn get-non-consec-twos [board]
   ; check row matches
