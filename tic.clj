@@ -82,33 +82,10 @@
   ([[x y z]] (and (= x z) (= y "_")))
   ([tile [x y z]] (and (= x z tile) (= y "_"))))
 
-(defn powh [x y]
-  (letfn [(helper [n acc]
-            (if (zero? n)
-              acc
-              (recur (dec n) (* x acc))))]
-    (helper y 1)))
-
-(defn get-non-consec-twos 
-  ([board] (do-non-consec-matches board non-consec-two-in-a-row?))
-  ([board tile] (do-non-consec-matches board (partial non-consec-two-in-a-row? tile)))
-  ; check row matches
-  (letfn [(do-non-consec-matches [board match-func]
-    (if-let [row-matches (filter match-func board)]
-      row-matches
-      ; now check columns
-      (if-let [colmn-matches
-               (filter match-func (get-columns board))]
-        colmn-matches
-        ; check main diagonal
-        (if-let [main-diag-matches
-                 (filter match-func (main-diag-values board))]
-          main-diag-matches
-          ; check minor diagonal
-          (if-let [minor-diag-matches
-                   (filter match-func (minor-diag-values board))]
-            minor-diag-matches
-            nil)))))]))
+; same as above but also return location
+(defn idx-non-consec-two-in-a-row?
+  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[i 0] [i 2]]}))
+  ([tile i [x y z]] (and (= x z tile) (= y "_")){:tile tile :loc [[i 0] [i 2]]}))
 
 (defn get-non-consec-twos [board]
   ; check row matches
@@ -127,6 +104,21 @@
                  (filter non-consec-two-in-a-row? (minor-diag-values board))]
           minor-diag-matches
           nil)))))
+
+(defn get-non-consec-idx [board]
+  (keep-indexed idx-non-consec-two-in-a-row? board))
+
+(defn is-non-consec-twos? [board tile]
+  (some #(= tile %) (first (get-non-consec-twos board))))
+
+; XXX work on this
+(defn get-two-non-consec [board tile]
+  (for [x [0 2] y [0 2]
+        ;:let [v (get-in board [0 2])]
+        ;:when (= v (get-in board [x y]))]
+        :when (= tile (get-in board [x y]))]
+        ;:when (= "X" (get-in board [x y]) (get-in board [x y]))]
+    {:tile (get-in board [x y]) :loc [x y]}))
 
 (defn get-two-in-a-row [board x y]
    (let [current-tile ((board x) y)
@@ -193,7 +185,9 @@
   (let [board-2-in-a-rows (get-board-two-in-a-rows board)
         board-2-non-consec (my-tile
         my-2-in-a-rows (board-2-in-a-rows my-tile)
+        my-non-consec-2 (my-tile)
         op-2-in-a-rows (board-2-in-a-rows (get-op-tile my-tile))]
+        op-non-consec-2 ( (get-op-tile my-tile))
     (cond
       ; do i have a 2-in-a-row ?, if so then win it
       (not (empty? my-2-in-a-rows)) (win-game game my-2-in-a-rows)
