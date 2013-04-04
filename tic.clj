@@ -84,29 +84,11 @@
 
 ; same as above but also return location
 (defn idx-non-consec-two-in-a-row?
-  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[i 0] [i 2]]} nil))
+  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[i 0] [i 2]]}))
   ([tile i [x y z]] (and (= x z tile) (= y "_")){:tile tile :loc [[i 0] [i 2]]}))
 
 (defn idx-non-consec-colmn-two-in-a-row?
   ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[0 i] [2 i]]})))
-
-(defn non-consec-twos? [board]
-  ; check row matches
-  (if-let [row-matches (filter non-consec-two-in-a-row? board)]
-    row-matches
-    ; now check columns
-    (if-let [colmn-matches
-             (filter non-consec-two-in-a-row? (get-columns board))]
-      colmn-matches
-      ; check main diagonal
-      (if-let [main-diag-matches
-               (filter non-consec-two-in-a-row? (main-diag-values board))]
-        main-diag-matches
-        ; check minor diagonal
-        (if-let [minor-diag-matches
-                 (filter non-consec-two-in-a-row? (minor-diag-values board))]
-          minor-diag-matches
-          nil)))))
 
 (defn get-non-consec-idx [board]
   (keep-indexed idx-non-consec-two-in-a-row? board))
@@ -124,13 +106,13 @@
         (if (not (empty? colmn-matches))
           colmn-matches
           ; check main diagonal
+          ; diagonals are much easier since we only have 2
           (if (non-consec-two-in-a-row? (flatten (main-diag-values board)))
             {:tile (get-in board [0 0]) :loc [[0 0] [2 2]]}
             ; check minor diagonal
             (if (non-consec-two-in-a-row? (flatten (minor-diag-values board)))
               {:tile (get-in board [0 2]) :loc [[0 2] [2 0]]}
               nil)))))))
-
 
 (defn is-non-consec-twos? [board tile]
   (some #(= tile %) (first (get-non-consec-twos board))))
