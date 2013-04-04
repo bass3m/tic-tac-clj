@@ -84,10 +84,13 @@
 
 ; same as above but also return location
 (defn idx-non-consec-two-in-a-row?
-  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[i 0] [i 2]]}))
+  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[i 0] [i 2]]} nil))
   ([tile i [x y z]] (and (= x z tile) (= y "_")){:tile tile :loc [[i 0] [i 2]]}))
 
-(defn get-non-consec-twos [board]
+(defn idx-non-consec-colmn-two-in-a-row?
+  ([i [x y z]] (if (and (= x z) (= y "_")) {:tile x :loc [[0 i] [2 i]]})))
+
+(defn non-consec-twos? [board]
   ; check row matches
   (if-let [row-matches (filter non-consec-two-in-a-row? board)]
     row-matches
@@ -108,29 +111,34 @@
 (defn get-non-consec-idx [board]
   (keep-indexed idx-non-consec-two-in-a-row? board))
 
+(defn get-non-consec-colmn-idx [board]
+  (keep-indexed idx-non-consec-colmn-two-in-a-row? (get-columns board)))
+
+(defn get-non-consec-twos [board]
+  ; check row matches
+  (let [row-matches (get-non-consec-idx board)]
+    (if (not (empty? row-matches))
+      row-matches
+      ; now check columns
+      (let [colmn-matches (get-non-consec-colmn-idx board)]
+        (if (not (empty? colmn-matches))
+          colmn-matches
+          ; check main diagonal
+          (if (non-consec-two-in-a-row? (flatten (main-diag-values board)))
+            {:tile (get-in board [0 0]) :loc [[0 0] [2 2]]}
+            ; check minor diagonal
+            (if (non-consec-two-in-a-row? (flatten (minor-diag-values board)))
+              {:tile (get-in board [0 2]) :loc [[0 2] [2 0]]}
+              nil)))))))
+
+
 (defn is-non-consec-twos? [board tile]
   (some #(= tile %) (first (get-non-consec-twos board))))
-
-; XXX work on this
-(defn get-two-non-consec [board tile]
-  (for [x [0 2] y [0 2]
-        ;:let [v (get-in board [0 2])]
-        ;:when (= v (get-in board [x y]))]
-        :when (= tile (get-in board [x y]))]
-        ;:when (= "X" (get-in board [x y]) (get-in board [x y]))]
-    {:tile (get-in board [x y]) :loc [x y]}))
 
 (defn get-two-in-a-row [board x y]
    (let [current-tile ((board x) y)
          my-neighbors (neighbors (count board) [x y])]
      (filter #(= current-tile (get-in board %)) my-neighbors)))
-
-; needs fixing XXX
-;(defn get-two-in-a-row
-  ;([board x y] (get-two-in-a-row board x y ((board x) y)))
-  ;([board x y current-tile]
-   ;(let [my-neighbors (neighbors (count board) [x y])]
-     ;(filter #(= current-tile (get-in board %)) my-neighbors))))
 
 (defn two-in-a-row? [board x y]
   (not (empty? (get-two-in-a-row board x y))))
