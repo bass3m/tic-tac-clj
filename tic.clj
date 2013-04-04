@@ -80,7 +80,35 @@
 ; pass in the values to check for non-consective matches
 (defn non-consec-two-in-a-row? 
   ([[x y z]] (and (= x z) (= y "_")))
-  ([[x y z] tile] (and (= x z tile) (= y "_"))))
+  ([tile [x y z]] (and (= x z tile) (= y "_"))))
+
+(defn powh [x y]
+  (letfn [(helper [n acc]
+            (if (zero? n)
+              acc
+              (recur (dec n) (* x acc))))]
+    (helper y 1)))
+
+(defn get-non-consec-twos 
+  ([board] (do-non-consec-matches board non-consec-two-in-a-row?))
+  ([board tile] (do-non-consec-matches board (partial non-consec-two-in-a-row? tile)))
+  ; check row matches
+  (letfn [(do-non-consec-matches [board match-func]
+    (if-let [row-matches (filter match-func board)]
+      row-matches
+      ; now check columns
+      (if-let [colmn-matches
+               (filter match-func (get-columns board))]
+        colmn-matches
+        ; check main diagonal
+        (if-let [main-diag-matches
+                 (filter match-func (main-diag-values board))]
+          main-diag-matches
+          ; check minor diagonal
+          (if-let [minor-diag-matches
+                   (filter match-func (minor-diag-values board))]
+            minor-diag-matches
+            nil)))))]))
 
 (defn get-non-consec-twos [board]
   ; check row matches
@@ -163,6 +191,7 @@
 ; do the next move after opening moves are done
 (defn next-move [{:keys [board my-tile my-turn] :as game}]
   (let [board-2-in-a-rows (get-board-two-in-a-rows board)
+        board-2-non-consec (my-tile
         my-2-in-a-rows (board-2-in-a-rows my-tile)
         op-2-in-a-rows (board-2-in-a-rows (get-op-tile my-tile))]
     (cond
