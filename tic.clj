@@ -100,11 +100,11 @@
   ; check row matches
   (let [row-matches (get-non-consec-idx board)]
     (if (not (empty? row-matches))
-      row-matches
+      (first row-matches)
       ; now check columns
       (let [colmn-matches (get-non-consec-colmn-idx board)]
         (if (not (empty? colmn-matches))
-          colmn-matches
+          (first colmn-matches)
           ; check main diagonal
           ; diagonals are much easier since we only have 2
           (if (non-consec-two-in-a-row? (flatten (main-diag-values board)))
@@ -170,19 +170,41 @@
         :when (not (empty? (get-two-in-a-row board x y)))]
     {:tile ((board x) y) :loc [x y]}))
 
+(defn win-game [game matches]
+  (println "You WIN!" matches))
+
+(defn block-2-in-a-row [game matches]
+  (println "Block"))
+
+(defn can-i-win? [{:keys [board my-tile] :as game}]
+  (let [board-2-in-a-rows (get-board-two-in-a-rows board)
+        my-2-in-a-rows ((group-player-moves board-2-in-a-rows) my-tile)
+        non-consec-matches (get-non-consec-twos board)]
+    (or (not (empty? my-2-in-a-rows))
+        ; do i have 2 non consec plays ? if so we can win
+        (and (not (empty? non-consec-matches))
+             (= (:tile non-consec-matches) my-tile)))))
+    
 ; do the next move after opening moves are done
 (defn next-move [{:keys [board my-tile my-turn] :as game}]
   (let [board-2-in-a-rows (get-board-two-in-a-rows board)
-        board-2-non-consec (my-tile
-        my-2-in-a-rows (board-2-in-a-rows my-tile)
-        my-non-consec-2 (my-tile)
-        op-2-in-a-rows (board-2-in-a-rows (get-op-tile my-tile))]
-        op-non-consec-2 ( (get-op-tile my-tile))
+        my-2-in-a-rows ((group-player-moves board-2-in-a-rows) my-tile)
+        op-2-in-a-rows ((group-player-moves board-2-in-a-rows) (get-op-tile my-tile))
+        non-consec-matches (get-non-consec-twos board)]
     (cond
+      (can-i-win? game) (win-game game my-2-in-a-rows)
       ; do i have a 2-in-a-row ?, if so then win it
       (not (empty? my-2-in-a-rows)) (win-game game my-2-in-a-rows)
+      ; do i have 2 non consec plays ? if so we can win
+      (and (not (empty? non-consec-matches))
+           (= (:tile non-consec-matches) my-tile)) (win-game game non-consec-matches)
       ; does other player have 2-in-a-row ? block that
       (not (empty? op-2-in-a-rows)) (block-2-in-a-row game op-2-in-a-rows)
+      ; block opponent if they have 2 non-consec matches
+      (and (not (empty? non-consec-matches))
+           (= (:tile non-consec-matches) (get-op-tile my-tile)))
+           (block-2-in-a-row game non-consec-matches)
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
+      :else (println "Else:" my-tile))))
