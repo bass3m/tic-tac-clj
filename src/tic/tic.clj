@@ -118,6 +118,13 @@
 (defn get-corners [board]
   (for [x [0 (- (count board) 1)] y [0 (- (count board) 1)]] [x y]))
 
+(defn get-sides [board]
+  (let [size (count board)]
+    (for [x (range size) y (range size) :when (or (= -1 (- x y))(= 1 (- x y)))] [x y])))
+
+(defn get-available-sides [board]
+  (filter #(if (= "_" (get-in board %)) %) (get-sides board)))
+
 (defn get-played-corners [board tile]
   (filter #(if (= tile (get-in board %)) %) (get-corners board)))
 
@@ -167,35 +174,43 @@
       ; else other player played edge, then just play center
       :else (assoc-in board [1 1] my-tile))))
 
-; fork
 (defn choose-next-move [{:keys [board my-tile my-turn] :as game}]
   (let [avail-corners (get-available-corners board)
+        avail-sides (get-available-sides board)
         my-played-corners (get-played-corners board my-tile)
         main-diag (main-diagonal board (count board))
         minor-diag (minor-diagonal board (count board))]
     ; if first always go for corners
     (if (= my-turn "First")
-      ; prefer opposite corner if available
-      (if (not (empty? (clojure.set/intersection (into #{} my-played-corners)
-                                                 (into #{} main-diag))))
-        ; i'm on main diagonal, let's see if there's any available spots
-        (first (clojure.set/intersection (into #{} avail-corners) 
-                                         (into #{} main-diag)))
+      (cond
+        ; prefer opposite corner if available
+        (not (empty? (clojure.set/intersection (into #{} my-played-corners)
+                                               (into #{} main-diag))))
+          ; i'm on main diagonal, let's see if there's any available spots
+          (first (clojure.set/intersection (into #{} avail-corners) 
+                                           (into #{} main-diag)))
         ; otherwise must be minor diagonal
-        (if (not (empty? (clojure.set/intersection (into #{} my-played-corners)
-                                                   (into #{} minor-diag))))
+        (not (empty? (clojure.set/intersection (into #{} my-played-corners)
+                                               (into #{} minor-diag))))
           ; i'm on minor diagonal, let's see if there's any available spots
           (first (clojure.set/intersection (into #{} avail-corners) 
                                            (into #{} minor-diag)))
-          ; else choose an availble corner
-          ; else choose center
-          ; else side
-
-  ; if second then prevent forking by grabbing the center
-  ; also don't grab corner, try to defend a fork on next move
-  ; so if second, then center followed by a side
-  )))))
-
+        ; else choose an availble corner
+        (not (empty? avail-corners)) (first avail-corners)
+        ; else choose center
+        (= "_" (get-center board)) [1 1]
+        ; else side
+        (not (empty? avail-sides)) (first avail-sides)
+        :else nil)
+      ; else turn = Second case, defending is somewhat easier
+      (cond
+        ; we're going second, pick center first
+        (= "_" (get-center board)) [1 1]
+        ; defend against forks by picking a side
+        (not (empty? avail-sides)) (first avail-sides)
+        ; else choose an availble corner
+        (not (empty? avail-corners)) (first avail-corners)
+        :else nil))))
 
 ; do the next move after opening moves are done
 (defn next-move [{:keys [board my-tile my-turn] :as game}]
@@ -217,4 +232,4 @@
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
-      :else (println "Else:" my-tile))))
+      :else (choose-next-move game))))
