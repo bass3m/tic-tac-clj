@@ -64,21 +64,21 @@
 (defn get-row-two-matches [i [x y z]]
   (cond
     (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
-      {:tile x :loc [[i 0] [i 2]] :descr "Non Consec Row"}
+      ^:Row {:tile x :loc [[i 0] [i 2]]}
     (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
-      {:tile x :loc [[i 0] [i 1]] :descr "Consec Row"}
+      ^:Row {:tile x :loc [[i 0] [i 1]]}
     (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
-      {:tile y :loc [[i 1] [i 2]] :descr "Consec Row"}
+      ^:Row {:tile y :loc [[i 1] [i 2]]}
     :else nil))
 
 (defn get-colm-two-matches [i [x y z]]
   (cond
     (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
-      {:tile x :loc [[0 i] [2 i]] :descr "Non Consec Colm"}
+      ^:Colm {:tile x :loc [[0 i] [2 i]]}
     (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
-      {:tile x :loc [[0 i] [1 i]] :descr "Consec Colm"}
+      ^:Colm {:tile x :loc [[0 i] [1 i]]}
     (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
-      {:tile y :loc [[1 i] [2 i]] :descr "Consec Colm"}
+      ^:Colm {:tile y :loc [[1 i] [2 i]]}
     :else nil))
 
 (defn get-diag-two-matches [board]
@@ -86,17 +86,17 @@
         [a b c] (flatten (minor-diag-values board))]
     (cond
       (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
-        (list {:tile x :loc [[0 0] [2 2]] :descr "Non Consec Main Diag"})
+        (list ^:Main {:tile x :loc [[0 0] [2 2]]})
       (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
-        (list {:tile x :loc [[0 0] [1 1]] :descr "Consec Main Diag"})
+        (list ^:Main {:tile x :loc [[0 0] [1 1]]})
       (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
-        (list {:tile y :loc [[1 1] [2 2]] :descr "Consec Main Diag"})
+        (list ^:Main {:tile y :loc [[1 1] [2 2]] })
       (and (= a c) (or (= a "X") (= a "O")) (= b "_")) 
-        (list {:tile a :loc [[0 2] [2 0]] :descr "Non Consec Minor Diag"})
+        (list ^:Minor {:tile a :loc [[0 2] [2 0]]})
       (and (= a b) (or (= a "X") (= a "O")) (= c "_")) 
-        (list {:tile a :loc [[0 2] [1 1]] :descr "Consec Minor Diag"})
+        (list ^:Minor {:tile a :loc [[0 2] [1 1]]})
       (and (= b c) (or (= b "X") (= b "O")) (= a "_")) 
-        (list {:tile b :loc [[1 1] [2 0]] :descr "Consec Minor Diag"})
+        (list ^:Minor {:tile b :loc [[1 1] [2 0]]})
       :else nil)))
 
 (defn get-board-two-matches [board]
@@ -141,7 +141,9 @@
                                 loc (:loc move)
                                 tile (:tile move)]
                             (group-player-moves (rest moves)
-                              (update-in player-moves [tile] (partial cons loc)))))))
+                              (update-in player-moves [tile] 
+                                         (partial cons 
+                                                  (with-meta loc (meta move)))))))))
 
 ;XXX can i use pattern matching on the results somehow ?
 ; return all the two-in-a-rows on the board
@@ -150,25 +152,42 @@
         :when (not (empty? (get-two-in-a-row board x y)))]
     {:tile ((board x) y) :loc [x y]}))
 
+; i actually, don't need to find the missing one, i just blindly fill the whole
+; row/column/diag etc... XXX
+; use the peepcode for example of multi-player /output etc..
 (defn win-game [game matches diag-matches]
-  (println "You WIN!" matches)
-  (println "You WIN!" diag-matches))
+  ; win-game should only be called if we either have row/column matches
+  ; else we have diagonal matches. we'll use the metadata to make life easier
+  (if (or (not (nil? matches))(not (nil? diag-matches)))
+    (case (first (keys (meta (first (concat matches diag-matches)))))
+      (:Row) (println "Row")
+      (:Colm) (println "Column")
+      (:Main) (println "Main Diag")
+      (:Minor) (println "Minor Diag")
+      "default" (println "Error, can't win!"))
+    (println "Error both are nil")))
+    ; we can win using row matches. let fill it
+    ; otherwise, must be using a diag
+  ;(println "You WIN!" matches)
+  ;(println "Meta" (meta (first matches)))
+  ;(println "You WIN! Diags" diag-matches)
+  ;(println "Meta" (meta (first diag-matches))))
 
 (defn block-2-in-a-row [game matches diag-matches]
   (println "You Block" matches)
-  (println "You Block" diag-matches))
+  (println "Meta" (meta matches))
+  (println "You Block Diags" diag-matches)
+  (println "Meta" (meta diag-matches)))
 
 (defn first-move [{:keys [board my-tile my-turn]}]
   ; i go first ?
   (if (= my-turn "First")
     ; this is the first move, the optimal move is to choose a corner
-    ;(conj (rest board) (assoc (board 0) 0 my-tile))
     (assoc-in board [0 0] my-tile)
     ; i go second, 3 options:
     (cond
       ; if other player played center, then play corner
       (= "X" (get-center board)) (assoc-in board [0 0] my-tile)
-      ;(= "X" (get-center board)) (conj (rest board) (assoc (board 0) 0 my-tile))
       ; if other player played a corner, then play center
       (not (empty? (get-played-corners board "X"))) (assoc-in board [1 1] my-tile)
       ; else other player played edge, then just play center

@@ -15,25 +15,17 @@
           ["_" "O" "_"]
           ["X" "_" "_"]])
 
-(def gm5 [["X" "_" "O"]
-          ["_" "_" "O"]
-          ["_" "_" "X"]])
-
 (def gm6 [["O" "_" "X"]
           ["O" "_" "_"]
           ["X" "_" "_"]])
 
-(def gm7 [["O" "_" "_"]
-          ["_" "X" "_"]
-          ["X" "_" "_"]])
+(def gm7 [["O" "_" "X"]
+          ["_" "_" "_"]
+          ["X" "_" "O"]])
 
 (def gm8 [["O" "_" "_"]
           ["X" "O" "X"]
           ["_" "_" "_"]])
-
-(def gm9 [["O" "_" "X"]
-          ["X" "O" "X"]
-          ["X" "_" "_"]])
 
 (def tm1 [["_" "_" "_"]
           ["_" "_" "_"]
@@ -41,7 +33,7 @@
 
 (deftest test-board-matched
   (is (= (get-board-two-matches gm4)
-         '({:tile "X", :loc [[0 0] [2 0]], :descr "Non Consec Colm"}))))
+         '({:tile "X", :loc [[0 0] [2 0]]}))))
 
 ; our first move is corner
 (deftest test-first-move-1
@@ -88,7 +80,7 @@
          [0 0])))
 
 (deftest test-center1
-  (is (= "O" (get-center gm9))))
+  (is (= "O" (get-center gm4))))
 
 ; test available sides
 (deftest test-avail-sides1
@@ -117,7 +109,7 @@
 
 (deftest test-next-move2
   (is (= (choose-next-move {:board gm2 :my-tile "O" :my-turn "First"})
-         [0 2])))
+         [2 0])))
 
 ; pick opposite corner
 (deftest test-next-move3
@@ -128,4 +120,31 @@
 (deftest test-next-move4
   (is (= (choose-next-move {:board tm4 :my-tile "O" :my-turn "Second"})
          [0 1])))
+
+; X has 2 ways to win, same as O
+(def gm5 [["X" "X" "_"]
+          ["X" "_" "O"]
+          ["_" "O" "O"]])
+
+; test metadata
+(deftest test-match-metadata1
+  (is (= (map #(meta %) ((group-player-moves 
+                           (get-board-two-matches gm5)) "X"))
+         '({:Colm true} {:Row true}))))
+
+(def gm9 [["O" "_" "X"]
+          ["X" "O" "X"]
+          ["X" "_" "_"]])
+
+(deftest test-match-metadata2
+  (is (= (map #(meta %) ((group-player-moves 
+                           (get-diag-two-matches gm9)) "O"))
+         '({:Main true}))))
+
+(deftest test-match-metadata3
+  (is (= (concat (map #(meta %) ((group-player-moves 
+                           (get-diag-two-matches gm9)) "O"))
+                  (map #(meta %) ((group-player-moves 
+                           (get-board-two-matches gm5)) "X")))
+         '({:Main true} {:Colm true} {:Row true}))))
 
