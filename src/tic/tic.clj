@@ -152,32 +152,44 @@
         :when (not (empty? (get-two-in-a-row board x y)))]
     {:tile ((board x) y) :loc [x y]}))
 
-; i actually, don't need to find the missing one, i just blindly fill the whole
-; row/column/diag etc... XXX
 ; use the peepcode for example of multi-player /output etc..
-(defn win-game [game matches diag-matches]
+(defn win-game [{:keys [board my-tile] :as game} matches diag-matches]
   ; win-game should only be called if we either have row/column matches
   ; else we have diagonal matches. we'll use the metadata to make life easier
   (if (or (not (nil? matches))(not (nil? diag-matches)))
-    (case (first (keys (meta (first (concat matches diag-matches)))))
-      (:Row) (println "Row")
-      (:Colm) (println "Column")
-      (:Main) (println "Main Diag")
-      (:Minor) (println "Minor Diag")
-      "default" (println "Error, can't win!"))
+    (let [which-match (first (concat matches diag-matches))]
+      (case (first (keys (meta which-match)))
+        (:Row) (reduce #(assoc-in %1 %2 my-tile) board
+                          (for [y (range (count board))] 
+                            [(first (first which-match)) y]))
+        (:Colm) (reduce #(assoc-in %1 %2 my-tile) board 
+                        (for [x (range (count board))] 
+                          [x (second (first which-match))]))
+        (:Main) (reduce #(assoc-in %1 %2 my-tile) board (main-diagonal board (count board)))
+        (:Minor) (reduce #(assoc-in %1 %2 my-tile) board (minor-diagonal board (count board)))
+        "default" (println "Error, can't win!")))
     (println "Error both are nil")))
-    ; we can win using row matches. let fill it
-    ; otherwise, must be using a diag
-  ;(println "You WIN!" matches)
-  ;(println "Meta" (meta (first matches)))
-  ;(println "You WIN! Diags" diag-matches)
-  ;(println "Meta" (meta (first diag-matches))))
 
-(defn block-2-in-a-row [game matches diag-matches]
-  (println "You Block" matches)
-  (println "Meta" (meta matches))
-  (println "You Block Diags" diag-matches)
-  (println "Meta" (meta diag-matches)))
+(defn block [{:keys [board my-tile] :as game} matches diag-matches]
+  ; win-game should only be called if we either have row/column matches
+  ; else we have diagonal matches. we'll use the metadata to make life easier
+  (if (or (not (nil? matches))(not (nil? diag-matches)))
+    (let [which-match (first (concat matches diag-matches))]
+      (case (first (keys (meta which-match)))
+        ; find the empty slot in the row and fill it with our tile
+        (:Row) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+                       board (for [y (range (count board))]
+                               [(first (first which-match)) y]))
+        ; find the empty slot in the column and fill it with our tile
+        (:Colm) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+                        board (for [x (range (count board))]
+                                [x (second (first which-match))]))
+        (:Main) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+                        board (main-diagonal board (count board)))
+        (:Minor) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+                        board (minor-diagonal board (count board)))
+        "default" (println "Error, can't block!")))
+    (println "Error both are nil")))
 
 (defn first-move [{:keys [board my-tile my-turn]}]
   ; i go first ?
@@ -247,7 +259,7 @@
       ; does other player have 2-in-a-row ? block that
       (or (not (empty? op-2-in-a-rows)) 
           (not (empty? op-diag-matches)))
-        (block-2-in-a-row game op-2-in-a-rows op-diag-matches)
+        (block game op-2-in-a-rows op-diag-matches)
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning

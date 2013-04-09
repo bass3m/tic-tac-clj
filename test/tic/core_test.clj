@@ -19,14 +19,6 @@
           ["O" "_" "_"]
           ["X" "_" "_"]])
 
-(def gm7 [["O" "_" "X"]
-          ["_" "_" "_"]
-          ["X" "_" "O"]])
-
-(def gm8 [["O" "_" "_"]
-          ["X" "O" "X"]
-          ["_" "_" "_"]])
-
 (def tm1 [["_" "_" "_"]
           ["_" "_" "_"]
           ["_" "_" "_"]])
@@ -148,3 +140,54 @@
                            (get-board-two-matches gm5)) "X")))
          '({:Main true} {:Colm true} {:Row true}))))
 
+; test rows
+(deftest test-win1
+  (is (= (next-move {:board gm3 :my-tile "X" :my-turn "First"})
+         [["X" "X" "X"] ["_" "O" "_"] ["O" "_" "_"]])))
+
+; test columns
+(deftest test-win2
+  (is (= (next-move {:board gm4 :my-tile "X" :my-turn "First"})
+         [["X" "_" "O"] ["X" "O" "_"] ["X" "_" "_"]])))
+
+; test major diag
+(deftest test-win3
+  (is (= (next-move {:board gm9 :my-tile "O" :my-turn "First"})
+         [["O" "_" "X"] ["X" "O" "X"] ["X" "_" "O"]])))
+
+; test minor diag
+(deftest test-win4
+  (is (= (next-move {:board gm3 :my-tile "O" :my-turn "First"})
+         [["X" "X" "O"] ["_" "O" "_"] ["O" "_" "_"]])))
+
+(def gm7 [["O" "O" "_"]
+          ["X" "_" "_"]
+          ["X" "_" "_"]])
+
+; test blocking rows
+(deftest test-block1
+  (is (= (next-move {:board gm7 :my-tile "X" :my-turn "First"})
+         [["O" "O" "X"] ["X" "_" "_"] ["X" "_" "_"]])))
+
+; test columns
+(deftest test-block2
+  (is (= (next-move {:board gm4 :my-tile "O" :my-turn "First"})
+         [["X" "_" "O"] ["O" "O" "_"] ["X" "_" "_"]])))
+
+(def gm8 [["O" "_" "_"]
+          ["X" "O" "X"]
+          ["_" "_" "_"]])
+
+; test major diag
+(deftest test-block3
+  (is (= (next-move {:board gm8 :my-tile "X" :my-turn "First"})
+         [["O" "_" "_"] ["X" "O" "X"] ["_" "_" "X"]])))
+
+(def tm5 [["X" "_" "O"]
+          ["_" "O" "_"]
+          ["_" "_" "X"]])
+
+; test minor diag
+(deftest test-block4
+  (is (= (next-move {:board tm5 :my-tile "X" :my-turn "First"})
+         [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]])))
