@@ -1,9 +1,9 @@
 (ns tic.tic
-  (:require clojure.edn))
-  ;(:use clojure.edn :only [read-string]))
+  (:require clojure.edn)
+  (:require clojure.set))
 
 (defn create-game 
-  ([player-name] create-game player-name 3)
+  ([player-name] (create-game player-name 3))
   ([player-name size] (let [my-turn (rand-int 2)]
                         {:board (vec (repeat size (vec (repeat size (identity "_")))))
                          :tile-values ["_" "X" "O"]
@@ -272,16 +272,15 @@
 
 (defn do-player-move [{:keys [board my-tile] :as game} move]
   ; check if it's a legal move, i.e. whether the coords are valid
-  (if (= "_" (get-in board move))
+  (if (= "_" (get-in board move)) ; slot is empty ?
     (assoc-in board move (get-op-tile my-tile))
-    (println "Invalid board spot given, try again")))
+    (println "Invalid board location: " (get-in board move) move)))
 
 (defn print-help []
   (do
     (println "Commands: help, move, new (create new game), quit")
     (println "help: prints this super helpful message")
     (println "move: make a move. Pick coordinates [x y] of position to play")
-    (println "new: create a new game")
     (println "quit: self explanatory, me thinks")))
 
 (defn print-board [game]
@@ -305,7 +304,7 @@
 
 (defn execute [game player-input]
   (try (let [[command & args] (.split player-input " ")]
-         (do (println (game-commands command) args (clojure.string/join " " args))
+         (do (println "Game: " game)
          (apply (game-commands command) game args)))
        (catch Exception e
          (.printStackTrace e (new java.io.PrintWriter *err*))
