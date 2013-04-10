@@ -191,3 +191,12 @@
 (deftest test-block4
   (is (= (next-move {:board tm5 :my-tile "X" :my-turn "First"})
          [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]])))
+
+; test command execution
+(deftest test-execute-commands1
+  (is (= (execute {:board tm1 :my-tile "O" :my-turn "Second"} "move [0 0]")
+         (str "moving [0 0]"))))
+
+;(deftest test-execute-commands2
+  ;(is (= (execute gm9 "move [1 2 3]")
+         ;(str "moving [1 2 3]"))))

@@ -1,14 +1,18 @@
-(ns tic.tic)
+(ns tic.tic
+  (:require clojure.edn))
+  ;(:use clojure.edn :only [read-string]))
 
-(defn create-board [size]
-  (let [my-turn (rand-int 2)]
-    {:board (vec (repeat size (vec (repeat size (identity "_")))))
-     :tile-values ["_" "X" "O"]
-     :size size
-     :my-moves []
-     :op-moves []
-     :my-tile (if (zero? my-turn) "X" "O")
-     :my-turn (if (zero? my-turn) "First" "Second")}))
+(defn create-game 
+  ([player-name] create-game player-name 3)
+  ([player-name size] (let [my-turn (rand-int 2)]
+                        {:board (vec (repeat size (vec (repeat size (identity "_")))))
+                         :tile-values ["_" "X" "O"]
+                         :size size
+                         :player-name (str player-name)
+                         :my-moves []
+                         :op-moves []
+                         :my-tile (if (zero? my-turn) "X" "O")
+                         :my-turn (if (zero? my-turn) "First" "Second")})))
 
 (defn get-op-tile [my-tile]
   (if (= my-tile "X") "O" "X"))
@@ -191,6 +195,7 @@
         "default" (println "Error, can't block!")))
     (println "Error both are nil")))
 
+; change comments to docstring
 (defn first-move [{:keys [board my-tile my-turn]}]
   ; i go first ?
   (if (= my-turn "First")
@@ -264,3 +269,45 @@
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
       :else (choose-next-move game))))
+
+(defn do-player-move [{:keys [board my-tile] :as game} move]
+  ; check if it's a legal move, i.e. whether the coords are valid
+  (if (= "_" (get-in board move))
+    (assoc-in board move (get-op-tile my-tile))
+    (println "Invalid board spot given, try again")))
+
+(defn print-help []
+  (do
+    (println "Commands: help, move, new (create new game), quit")
+    (println "help: prints this super helpful message")
+    (println "move: make a move. Pick coordinates [x y] of position to play")
+    (println "new: create a new game")
+    (println "quit: self explanatory, me thinks")))
+
+(defn print-board [game]
+  (println game))
+
+(defn player-move [game arg]
+  (let [move (clojure.edn/read-string (clojure.string/join " " arg))]
+    ; make sure player picked a proper spot on our board
+    (if (and (vector? move) 
+             (= 2 (count move)) ; spot is 2 dimensional
+             (#(< -1 % 3) (apply max move))) ; check range
+                (do-player-move game move)
+               ;(println "moving:" move " game: " game)
+               ; XXX here, i need to modify board if possible, then call next move
+               ; then return game
+      (do (println "No good" move game arg) move))))
+
+(def game-commands {"quit" (fn [game] (println "quitting"))
+                    "help" print-help
+                    "move" (fn [game & args] (player-move game args))})
+
+(defn execute [game player-input]
+  (try (let [[command & args] (.split player-input " ")]
+         (do (println (game-commands command) args (clojure.string/join " " args))
+         (apply (game-commands command) game args)))
+       (catch Exception e
+         (.printStackTrace e (new java.io.PrintWriter *err*))
+         "You can't do that!")))
+
