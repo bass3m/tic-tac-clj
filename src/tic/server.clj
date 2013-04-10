@@ -39,14 +39,13 @@
     ;; the one above so *in* and *out* will be bound to the socket
     (print "\nWhat is your name? ") (flush)
     ; add name to the create game
-    (let [player-name (read-line)
-          game (create-game player-name)]
-      (println "\nWelcome " player-name " Game: " game)
+    (let [player-name (read-line)]
+      (println "\nWelcome " player-name)
       (print-help) (print "> ") (flush)
 
       (try (loop [input (read-line)]
              (when input
-               (execute game input)
+               (let [game (execute game input)]
                (.flush *err*)
                (print "> ") (flush)
                (recur (read-line))))

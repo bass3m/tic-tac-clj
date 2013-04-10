@@ -113,6 +113,15 @@
   (is (= (choose-next-move {:board tm4 :my-tile "O" :my-turn "Second"})
          [0 1])))
 
+(def tm6 [["X" "O" "O"]
+          ["O" "X" "X"]
+          ["O" "X" "O"]])
+
+; what move when board is full ?
+(deftest test-next-move5
+  (is (= (choose-next-move {:board tm6 :my-tile "O" :my-turn "Second"})
+         nil)))
+
 ; X has 2 ways to win, same as O
 (def gm5 [["X" "X" "_"]
           ["X" "_" "O"]
@@ -195,7 +204,7 @@
 ; test command execution
 (deftest test-execute-commands1
   (is (= (execute {:board tm1 :my-tile "O" :my-turn "Second"} "move [0 0]")
-         (str "moving [0 0]"))))
+         [1 1])))
 
 ;(deftest test-execute-commands2
   ;(is (= (execute gm9 "move [1 2 3]")

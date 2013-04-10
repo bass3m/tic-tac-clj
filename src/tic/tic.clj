@@ -1,15 +1,16 @@
 (ns tic.tic
   (:require clojure.edn)
-  (:require clojure.set))
+  (:use [clojure.set :as set :only [intersection]]))
 
-(defn create-game 
+(defn create-game
   ([player-name] (create-game player-name 3))
   ([player-name size] (let [my-turn (rand-int 2)]
                         {:board (vec (repeat size (vec (repeat size (identity "_")))))
                          :tile-values ["_" "X" "O"]
+                         :game-result ""
                          :size size
                          :player-name (str player-name)
-                         :my-moves []
+                         :my-moves [] ; for future to keep track of history
                          :op-moves []
                          :my-tile (if (zero? my-turn) "X" "O")
                          :my-turn (if (zero? my-turn) "First" "Second")})))
@@ -67,21 +68,21 @@
 
 (defn get-row-two-matches [i [x y z]]
   (cond
-    (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
+    (and (= x z) (or (= x "X") (= x "O")) (= y "_"))
       ^:Row {:tile x :loc [[i 0] [i 2]]}
-    (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
+    (and (= x y) (or (= x "X") (= x "O")) (= z "_"))
       ^:Row {:tile x :loc [[i 0] [i 1]]}
-    (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
+    (and (= y z) (or (= y "X") (= y "O")) (= x "_"))
       ^:Row {:tile y :loc [[i 1] [i 2]]}
     :else nil))
 
 (defn get-colm-two-matches [i [x y z]]
   (cond
-    (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
+    (and (= x z) (or (= x "X") (= x "O")) (= y "_"))
       ^:Colm {:tile x :loc [[0 i] [2 i]]}
-    (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
+    (and (= x y) (or (= x "X") (= x "O")) (= z "_"))
       ^:Colm {:tile x :loc [[0 i] [1 i]]}
-    (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
+    (and (= y z) (or (= y "X") (= y "O")) (= x "_"))
       ^:Colm {:tile y :loc [[1 i] [2 i]]}
     :else nil))
 
@@ -89,17 +90,17 @@
   (let [[x y z] (flatten (main-diag-values board))
         [a b c] (flatten (minor-diag-values board))]
     (cond
-      (and (= x z) (or (= x "X") (= x "O")) (= y "_")) 
+      (and (= x z) (or (= x "X") (= x "O")) (= y "_"))
         (list ^:Main {:tile x :loc [[0 0] [2 2]]})
-      (and (= x y) (or (= x "X") (= x "O")) (= z "_")) 
+      (and (= x y) (or (= x "X") (= x "O")) (= z "_"))
         (list ^:Main {:tile x :loc [[0 0] [1 1]]})
-      (and (= y z) (or (= y "X") (= y "O")) (= x "_")) 
+      (and (= y z) (or (= y "X") (= y "O")) (= x "_"))
         (list ^:Main {:tile y :loc [[1 1] [2 2]] })
-      (and (= a c) (or (= a "X") (= a "O")) (= b "_")) 
+      (and (= a c) (or (= a "X") (= a "O")) (= b "_"))
         (list ^:Minor {:tile a :loc [[0 2] [2 0]]})
-      (and (= a b) (or (= a "X") (= a "O")) (= c "_")) 
+      (and (= a b) (or (= a "X") (= a "O")) (= c "_"))
         (list ^:Minor {:tile a :loc [[0 2] [1 1]]})
-      (and (= b c) (or (= b "X") (= b "O")) (= a "_")) 
+      (and (= b c) (or (= b "X") (= b "O")) (= a "_"))
         (list ^:Minor {:tile b :loc [[1 1] [2 0]]})
       :else nil)))
 
@@ -111,8 +112,8 @@
 (defn get-two-in-a-row [board x y]
    (let [current-tile ((board x) y)
          my-neighbors (neighbors (count board) [x y])]
-     (filter #(and (= current-tile (get-in board %)) 
-                   (or (= current-tile "X") 
+     (filter #(and (= current-tile (get-in board %))
+                   (or (= current-tile "X")
                        (= current-tile "O"))) my-neighbors)))
 
 ; XXX this assumes a size 3 board, but what do you do for larger ?
@@ -135,7 +136,6 @@
 (defn get-available-corners [board]
   (filter #(if (= "_" (get-in board %)) %) (get-corners board)))
 
-; XXX i'm sure there is a clojure ftn that does this better,
 ; not really proud of this
 (defn group-player-moves
   ([moves] (group-player-moves moves {}))
@@ -145,52 +145,52 @@
                                 loc (:loc move)
                                 tile (:tile move)]
                             (group-player-moves (rest moves)
-                              (update-in player-moves [tile] 
-                                         (partial cons 
+                              (update-in player-moves [tile]
+                                         (partial cons
                                                   (with-meta loc (meta move)))))))))
 
-;XXX can i use pattern matching on the results somehow ?
 ; return all the two-in-a-rows on the board
 (defn get-board-two-in-a-rows [board]
   (for [x (range (count board)) y (range (count board))
         :when (not (empty? (get-two-in-a-row board x y)))]
     {:tile ((board x) y) :loc [x y]}))
 
-; use the peepcode for example of multi-player /output etc..
-(defn win-game [{:keys [board my-tile] :as game} matches diag-matches]
-  ; win-game should only be called if we either have row/column matches
-  ; else we have diagonal matches. we'll use the metadata to make life easier
+(defn win-game
+  "Win game. We'll use the metadata to make life easier. Returns filled board."
+  [{:keys [board my-tile] :as game} matches diag-matches]
   (if (or (not (nil? matches))(not (nil? diag-matches)))
     (let [which-match (first (concat matches diag-matches))]
       (case (first (keys (meta which-match)))
         (:Row) (reduce #(assoc-in %1 %2 my-tile) board
-                          (for [y (range (count board))] 
+                          (for [y (range (count board))]
                             [(first (first which-match)) y]))
-        (:Colm) (reduce #(assoc-in %1 %2 my-tile) board 
-                        (for [x (range (count board))] 
+        (:Colm) (reduce #(assoc-in %1 %2 my-tile) board
+                        (for [x (range (count board))]
                           [x (second (first which-match))]))
-        (:Main) (reduce #(assoc-in %1 %2 my-tile) board (main-diagonal board (count board)))
-        (:Minor) (reduce #(assoc-in %1 %2 my-tile) board (minor-diagonal board (count board)))
+        (:Main) (reduce #(assoc-in %1 %2 my-tile) board 
+                        (main-diagonal board (count board)))
+        (:Minor) (reduce #(assoc-in %1 %2 my-tile) board 
+                         (minor-diagonal board (count board)))
         "default" (println "Error, can't win!")))
     (println "Error both are nil")))
 
-(defn block [{:keys [board my-tile] :as game} matches diag-matches]
-  ; win-game should only be called if we either have row/column matches
-  ; else we have diagonal matches. we'll use the metadata to make life easier
+(defn block 
+  "Block opponent's 3 in a row, returns board."
+  [{:keys [board my-tile] :as game} matches diag-matches]
   (if (or (not (nil? matches))(not (nil? diag-matches)))
     (let [which-match (first (concat matches diag-matches))]
       (case (first (keys (meta which-match)))
         ; find the empty slot in the row and fill it with our tile
-        (:Row) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+        (:Row) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1)
                        board (for [y (range (count board))]
                                [(first (first which-match)) y]))
         ; find the empty slot in the column and fill it with our tile
-        (:Colm) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+        (:Colm) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1)
                         board (for [x (range (count board))]
                                 [x (second (first which-match))]))
-        (:Main) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+        (:Main) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1)
                         board (main-diagonal board (count board)))
-        (:Minor) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1) 
+        (:Minor) (reduce #(if (= "_" (get-in %1 %2)) (assoc-in %1 %2 my-tile) %1)
                         board (minor-diagonal board (count board)))
         "default" (println "Error, can't block!")))
     (println "Error both are nil")))
@@ -210,7 +210,10 @@
       ; else other player played edge, then just play center
       :else (assoc-in board [1 1] my-tile))))
 
-(defn choose-next-move [{:keys [board my-tile my-turn] :as game}]
+(defn choose-next-move
+  "Returns vector with location of next move.
+  If nil is returned then it's a tied game."
+  [{:keys [board my-tile my-turn] :as game}]
   (let [avail-corners (get-available-corners board)
         avail-sides (get-available-sides board)
         my-played-corners (get-played-corners board my-tile)
@@ -220,17 +223,17 @@
     (if (= my-turn "First")
       (cond
         ; prefer opposite corner if available
-        (not (empty? (clojure.set/intersection (into #{} my-played-corners)
-                                               (into #{} main-diag))))
+        (not (empty? (set/intersection (into #{} my-played-corners)
+                                       (into #{} main-diag))))
           ; i'm on main diagonal, let's see if there's any available spots
-          (first (clojure.set/intersection (into #{} avail-corners) 
-                                           (into #{} main-diag)))
+          (first (set/intersection (into #{} avail-corners)
+                                   (into #{} main-diag)))
         ; otherwise must be minor diagonal
-        (not (empty? (clojure.set/intersection (into #{} my-played-corners)
-                                               (into #{} minor-diag))))
+        (not (empty? (set/intersection (into #{} my-played-corners)
+                                       (into #{} minor-diag))))
           ; i'm on minor diagonal, let's see if there's any available spots
-          (first (clojure.set/intersection (into #{} avail-corners) 
-                                           (into #{} minor-diag)))
+          (first (set/intersection (into #{} avail-corners)
+                                   (into #{} minor-diag)))
         ; else choose an availble corner
         (not (empty? avail-corners)) (first avail-corners)
         ; else choose center
@@ -258,27 +261,36 @@
         op-diag-matches ((group-player-moves diag-matches) (get-op-tile my-tile))]
     (cond
       ; do i have a 2-in-a-row ?, if so then win it
-      (or (not (empty? my-2-in-a-rows)) 
+      (or (not (empty? my-2-in-a-rows))
           (not (empty? my-diag-matches)))
         (win-game game my-2-in-a-rows my-diag-matches)
       ; does other player have 2-in-a-row ? block that
-      (or (not (empty? op-2-in-a-rows)) 
+      (or (not (empty? op-2-in-a-rows))
           (not (empty? op-diag-matches)))
         (block game op-2-in-a-rows op-diag-matches)
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
-      :else (choose-next-move game))))
+      :else {:board (assoc-in board (choose-next-move game) my-tile)
+             :my-tile my-tile})))
+      ;:else (choose-next-move game))))
 
 (defn do-player-move [{:keys [board my-tile] :as game} move]
   ; check if it's a legal move, i.e. whether the coords are valid
   (if (= "_" (get-in board move)) ; slot is empty ?
-    (assoc-in board move (get-op-tile my-tile))
-    (println "Invalid board location: " (get-in board move) move)))
+    ; fill in opponent play then do ours after that play
+    (let [outcome (next-move {:board (assoc-in board move 
+                                               (get-op-tile my-tile)) :my-tile my-tile})]
+      ; need to find out if there was a tie or a win etc..
+      (if (win? (:board outcome))
+        (println "Sorry you lost. Me the Winnar!")
+        outcome)
+    (println "Invalid board location: " (get-in board move) board move))))
 
 (defn print-help []
   (do
     (println "Commands: help, move, new (create new game), quit")
+    (println "new: start a new game")
     (println "help: prints this super helpful message")
     (println "move: make a move. Pick coordinates [x y] of position to play")
     (println "quit: self explanatory, me thinks")))
@@ -287,19 +299,25 @@
   (println game))
 
 (defn player-move [game arg]
-  (let [move (clojure.edn/read-string (clojure.string/join " " arg))]
-    ; make sure player picked a proper spot on our board
-    (if (and (vector? move) 
-             (= 2 (count move)) ; spot is 2 dimensional
-             (#(< -1 % 3) (apply max move))) ; check range
-                (do-player-move game move)
-               ;(println "moving:" move " game: " game)
-               ; XXX here, i need to modify board if possible, then call next move
-               ; then return game
-      (do (println "No good" move game arg) move))))
+  (if (nil? game)
+    (println "Non game started ?")
+    (let [move (clojure.edn/read-string (clojure.string/join " " arg))]
+      ; make sure player picked a proper spot on our board
+      (if (and (vector? move)
+               (= 2 (count move)) ; spot is 2 dimensional
+               (#(< -1 % 3) (apply max move))) ; check range
+                  (do-player-move game move)
+                 ;(println "moving:" move " game: " game)
+                 ; XXX here, i need to modify board if possible, then call next move
+                 ; then return game
+        (do (println "No good" move game arg) move)))))
+
+(defn start-new-game []
+  (create-game "noname"))
 
 (def game-commands {"quit" (fn [game] (println "quitting"))
                     "help" print-help
+                    "new" start-new-game
                     "move" (fn [game & args] (player-move game args))})
 
 (defn execute [game player-input]
