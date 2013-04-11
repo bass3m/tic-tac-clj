@@ -3,17 +3,16 @@
   (:use [clojure.set :as set :only [intersection]]))
 
 (defn create-game
-  ([player-name] (create-game player-name 3))
-  ([player-name size] (let [my-turn (rand-int 2)]
-                        {:board (vec (repeat size (vec (repeat size (identity "_")))))
-                         :tile-values ["_" "X" "O"]
-                         :game-result ""
-                         :size size
-                         :player-name (str player-name)
-                         :my-moves [] ; for future to keep track of history
-                         :op-moves []
-                         :my-tile (if (zero? my-turn) "X" "O")
-                         :my-turn (if (zero? my-turn) "First" "Second")})))
+  ([] (create-game 3))
+  ([size] (let [my-turn (rand-int 2)]
+            {:board (vec (repeat size (vec (repeat size (identity "_")))))
+             :tile-values ["_" "X" "O"]
+             :game-result ""
+             :size size
+             :my-moves [] ; for future to keep track of history
+             :op-moves []
+             :my-tile (if (zero? my-turn) "X" "O")
+             :my-turn (if (zero? my-turn) "First" "Second")})))
 
 (defn get-op-tile [my-tile]
   (if (= my-tile "X") "O" "X"))
@@ -36,15 +35,17 @@
 ; returns true/false
 ; reduce returns nil is not all elements in row are equal
 (defn three-in-a-row [row]
-  (not (nil? (reduce #(if (= %1 %2) %1 nil) row))))
+  (not (nil? (reduce #(if (and (not (= %1 "_")) (= %1 %2)) %1 nil) row))))
 
-(defn check-board-matches [board]
+(defn check-board-matches 
+  "Check for 3 in a row matches in rows/columns/diagonals"
+  [board]
   (cond
-    ; check for 3-in-a-row columns match
-    (not (empty? (filter three-in-a-row (get-columns board)))) true
-    (not (empty? (filter three-in-a-row board))) true
-    (not (empty? (filter three-in-a-row (main-diag-values board)))) true
-    (not (empty? (filter three-in-a-row (minor-diag-values board)))) true
+    (not (every? empty? (filter three-in-a-row (get-columns board)))) true
+    (not (every? empty? (filter three-in-a-row board))) true
+    ; there is only 1 major diagonal and 1 minor diagonal
+    (three-in-a-row (vec (flatten (main-diag-values board)))) true
+    (three-in-a-row (vec (flatten (minor-diag-values board)))) true
     :else false))
 
 (defn win? [{board :board}]
@@ -272,20 +273,23 @@
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
       :else {:board (assoc-in board (choose-next-move game) my-tile)
-             :my-tile my-tile})))
+             :my-tile my-tile :my-turn my-turn})))
       ;:else (choose-next-move game))))
 
-(defn do-player-move [{:keys [board my-tile] :as game} move]
+(defn do-player-move [{:keys [board my-tile my-turn] :as game} move]
   ; check if it's a legal move, i.e. whether the coords are valid
+    (println "test" move (get-in board move) my-tile my-turn)
   (if (= "_" (get-in board move)) ; slot is empty ?
     ; fill in opponent play then do ours after that play
     (let [outcome (next-move {:board (assoc-in board move 
-                                               (get-op-tile my-tile)) :my-tile my-tile})]
+                                               (get-op-tile my-tile)) 
+                              :my-tile my-tile :my-turn my-turn})]
+      (println (:board outcome))
       ; need to find out if there was a tie or a win etc..
-      (if (win? (:board outcome))
+      (if (win? outcome)
         (println "Sorry you lost. Me the Winnar!")
-        outcome)
-    (println "Invalid board location: " (get-in board move) board move))))
+        (do (println outcome) outcome)))
+    (println "Invalid board location: " (get-in board move) board move)))
 
 (defn print-help []
   (do
@@ -307,13 +311,11 @@
                (= 2 (count move)) ; spot is 2 dimensional
                (#(< -1 % 3) (apply max move))) ; check range
                   (do-player-move game move)
-                 ;(println "moving:" move " game: " game)
-                 ; XXX here, i need to modify board if possible, then call next move
-                 ; then return game
         (do (println "No good" move game arg) move)))))
 
-(defn start-new-game []
-  (create-game "noname"))
+(defn start-new-game [& args]
+  (println "Got a start")
+  (create-game))
 
 (def game-commands {"quit" (fn [game] (println "quitting"))
                     "help" print-help
@@ -322,7 +324,7 @@
 
 (defn execute [game player-input]
   (try (let [[command & args] (.split player-input " ")]
-         (do (println "Game: " game)
+         (do (println "Game: " game " inp:" player-input " args:" args)
          (apply (game-commands command) game args)))
        (catch Exception e
          (.printStackTrace e (new java.io.PrintWriter *err*))

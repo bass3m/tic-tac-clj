@@ -23,6 +23,10 @@
           ["_" "_" "_"]
           ["_" "_" "_"]])
 
+(def tm7 [["O" "O" "O"]
+          ["O" "X" "X"]
+          ["O" "X" "O"]])
+
 (deftest test-board-matched
   (is (= (get-board-two-matches gm4)
          '({:tile "X", :loc [[0 0] [2 0]]}))))
@@ -201,9 +205,15 @@
   (is (= (next-move {:board tm5 :my-tile "X" :my-turn "First"})
          [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]])))
 
-; test command execution
+; test new game
 (deftest test-execute-commands1
-  (is (= (execute {:board tm1 :my-tile "O" :my-turn "Second"} "move [0 0]")
+  (let [res (execute nil "new")]
+    (is (= (:board res)
+           [["_" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]]))))
+
+; test command execution
+(deftest test-execute-commands2
+  (is (= (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")
          [1 1])))
 
 ;(deftest test-execute-commands2
