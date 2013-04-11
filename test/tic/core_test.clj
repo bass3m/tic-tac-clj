@@ -213,8 +213,9 @@
 
 ; test command execution
 (deftest test-execute-commands2
-  (is (= (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")
-         [1 1])))
+  (let [res (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")]
+    (is (= (:board res)
+           [["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]]))))
 
 ;(deftest test-execute-commands2
   ;(is (= (execute gm9 "move [1 2 3]")
