@@ -44,22 +44,21 @@
       (println "\nWelcome " player-name)
       (print-help) (print "> ") (flush)
 
-      ;(try (loop [input (read-line)]
-             ;(when input
-               ;(let [game (execute game input)]
-                 ;(.flush *err*)
-                 ;(println "loop-Game: " game " Input: " input)
-                 ;(print "> ") (flush))
-               ;(recur (read-line))))
-           ;(finally (cleanup))))))
-
-      (try (loop [game nil]
-             (print "> ") (flush)
-             (when-let [input (read-line)]
+      (try (loop [input (read-line)]
+             (when input
+               (println (execute input))
                (.flush *err*)
-               (println "loop-Game: " game " Input: " input)
-               (recur (execute game input))))
+               (print "> ") (flush))
+               (recur (read-line)))
            (finally (cleanup))))))
+
+      ;(try (loop [game nil]
+             ;(print "> ") (flush)
+             ;(when-let [input (read-line)]
+               ;(.flush *err*)
+               ;(println "loop-Game: " game " Input: " input)
+               ;(recur (execute game input))))
+           ;(finally (cleanup))))))
 
 (defn -main
   ([port-num]

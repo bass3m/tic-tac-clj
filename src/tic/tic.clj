@@ -2,24 +2,34 @@
   (:require clojure.edn)
   (:use [clojure.set :as set :only [intersection]]))
 
+; Our game is an atom
+(def game (atom {}))
+
+;(defn update-positions [{snake :snake, apple :apple, :as game}]
+  ;(if (eats? snake apple)
+    ;(merge game {:apple (create-apple) :snake (move snake :grow)})
+    ;(merge game {:snake (move snake)})))
+; END: update-positions
+
+;(defn update-direction [{snake :snake :as game} newdir]
+  ;(merge game {:snake (turn snake newdir)}))
 
 (defn create-game
-  ([] (create-game 3))
-  ([size] (let [my-turn (rand-int 2)]
-            {:board (vec (repeat size (vec (repeat size (identity "_")))))
-             :tile-values ["_" "X" "O"]
-             :game-result ""
-             :size size
-             :my-moves [] ; for future to keep track of history
-             :op-moves []
-             :my-tile (if (zero? my-turn) "X" "O")
-             :my-turn (if (zero? my-turn) "First" "Second")})))
+  ([game] (create-game game 3))
+  ([game size] (let [my-turn (rand-int 2)]
+                 (conj game {:board (vec (repeat size (vec (repeat size (identity "_")))))
+                              ;:tile-values ["_" "X" "O"] ; perhaps a set is better here ?
+                              :size size
+                              ;:my-moves [] ; for future to keep track of history
+                              ;:op-moves []
+                              :my-tile (if (zero? my-turn) "X" "O")
+                              :my-turn (if (zero? my-turn) "First" "Second")}))))
 
 (defn get-op-tile [my-tile]
-  (if (= my-tile "X") "O" my-tile))
+  (if (= my-tile "X") "O" "X"))
 
 (defn get-op-turn [my-turn]
-  (if (= my-turn "First") "Second" my-turn))
+  (if (= my-turn "First") "Second" "First"))
 
 (defn get-columns [board]
   (vec (apply map vector board)))
@@ -28,6 +38,7 @@
   (for [x (range size) y (range size) :when (= x y)] [x y]))
 
 (defn main-diag-values [board]
+  (println board)
   (for [[x y] (main-diagonal board (count board))] [((board x) y)]))
 
 (defn minor-diagonal [board size]
@@ -39,20 +50,22 @@
 ; returns true/false
 ; reduce returns nil is not all elements in row are equal
 (defn three-in-a-row [row]
+  (println "row" row)
   (not (nil? (reduce #(if (and (not (= %1 "_")) (= %1 %2)) %1 nil) row))))
 
 (defn check-board-matches 
   "Check for 3 in a row matches in rows/columns/diagonals"
   [board]
   (cond
-    (not (every? empty? (filter three-in-a-row (get-columns board)))) true
-    (not (every? empty? (filter three-in-a-row board))) true
+    (not (every? empty? (filter three-in-a-row (get-columns board)))) (do (println "col") true)
+    (not (every? empty? (filter three-in-a-row board))) (do (println "row") true)
     ; there is only 1 major diagonal and 1 minor diagonal
-    (three-in-a-row (vec (flatten (main-diag-values board)))) true
-    (three-in-a-row (vec (flatten (minor-diag-values board)))) true
+    (three-in-a-row (vec (flatten (main-diag-values board)))) (do (println "main") true)
+    (three-in-a-row (vec (flatten (minor-diag-values board)))) (do (println "minor") true)
     :else false))
 
-(defn win? [{board :board}]
+(defn win? [board]
+  (println "win? board: " board)
   (check-board-matches board))
 
 ; ugh, or
@@ -162,7 +175,7 @@
 
 (defn win-game
   "Win game. We'll use the metadata to make life easier. Returns filled board."
-  [{:keys [board my-tile] :as game} matches diag-matches]
+  [{:keys [board my-tile]} matches diag-matches]
   (if (or (not (nil? matches))(not (nil? diag-matches)))
     (let [which-match (first (concat matches diag-matches))]
       (case (first (keys (meta which-match)))
@@ -181,7 +194,7 @@
 
 (defn block 
   "Block opponent's 3 in a row, returns board."
-  [{:keys [board my-tile] :as game} matches diag-matches]
+  [{:keys [board my-tile]} matches diag-matches]
   (if (or (not (nil? matches))(not (nil? diag-matches)))
     (let [which-match (first (concat matches diag-matches))]
       (case (first (keys (meta which-match)))
@@ -202,26 +215,28 @@
 
 (defn first-move 
   "Do the first move"
-  [{:keys [board my-tile my-turn] :as game}]
+  ;[game]
+  [{:keys [board my-tile my-turn]}]
+  ;(let [board (:board @game) my-tile (:my-tile @game) my-turn (:my-turn @game)]
   ; i go first ?
-  (if (= my-turn "First")
-    ; this is the first move, the optimal move is to choose a corner
-    {:board (assoc-in board [0 0] my-tile) :my-tile my-tile :my-turn my-turn}
-    ; i go second, 3 options:
-    (cond
-      ; if other player played center, then play corner
-      (= "X" (get-center board)) {:board (assoc-in board [0 0] my-tile) 
-                                  :my-tile my-tile :my-turn my-turn}
-      ; if other player played a corner, then play center
-      (not (empty? (get-played-corners board "X"))) 
-        {:board (assoc-in board [1 1] my-tile) :my-tile my-tile :my-turn my-turn}
-      ; else other player played edge, then just play center
-      :else {:board (assoc-in board [1 1] my-tile) :my-tile my-tile :my-turn my-turn})))
+    (if (= my-turn "First")
+      ; this is the first move, the optimal move is to choose a corner
+      {:board (assoc-in board [0 0] my-tile) :my-tile my-tile :my-turn my-turn}
+      ; i go second, 3 options:
+      (cond
+        ; if other player played center, then play corner
+        (= "X" (get-center board)) {:board (assoc-in board [0 0] my-tile) 
+                                    :my-tile my-tile :my-turn my-turn}
+        ; if other player played a corner, then play center
+        (not (empty? (get-played-corners board "X"))) 
+          {:board (assoc-in board [1 1] my-tile) :my-tile my-tile :my-turn my-turn}
+        ; else other player played edge, then just play center
+        :else {:board (assoc-in board [1 1] my-tile) :my-tile my-tile :my-turn my-turn})))
 
 (defn choose-next-move
   "Returns vector with location of next move.
   If nil is returned then it's a tied game."
-  [{:keys [board my-tile my-turn] :as game}]
+  [{:keys [board my-tile my-turn]}]
   (let [avail-corners (get-available-corners board)
         avail-sides (get-available-sides board)
         my-played-corners (get-played-corners board my-tile)
@@ -262,46 +277,63 @@
 ; do the next move after opening moves are done
 (defn next-move 
   "Return nil is there are no available moves. i.e. Tied game"
-  [{:keys [board my-tile my-turn] :as game}]
+  [{:keys [board my-tile my-turn]}]
   (let [board-2-in-a-rows (get-board-two-matches board)
         my-2-in-a-rows ((group-player-moves board-2-in-a-rows) my-tile)
         diag-matches (get-diag-two-matches board)
         my-diag-matches ((group-player-moves diag-matches) my-tile)
         op-2-in-a-rows ((group-player-moves board-2-in-a-rows) (get-op-tile my-tile))
-        op-diag-matches ((group-player-moves diag-matches) (get-op-tile my-tile))]
+        op-diag-matches ((group-player-moves diag-matches) (get-op-tile my-tile))
+        new-game {:my-tile my-tile :my-turn my-turn}]
     (cond
       ; do i have a 2-in-a-row ?, if so then win it
       (or (not (empty? my-2-in-a-rows))
           (not (empty? my-diag-matches)))
-        (win-game game my-2-in-a-rows my-diag-matches)
+        (assoc new-game :board (win-game 
+                                 {:board board :my-tile my-tile :my-turn my-turn} 
+                                 my-2-in-a-rows my-diag-matches))
       ; does other player have 2-in-a-row ? block that
       (or (not (empty? op-2-in-a-rows))
           (not (empty? op-diag-matches)))
-        (block game op-2-in-a-rows op-diag-matches)
+        (assoc new-game :board (block 
+                                 {:board board :my-tile my-tile :my-turn my-turn}
+                                 op-2-in-a-rows op-diag-matches))
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
-      :else (let [move (choose-next-move game)]
+      :else (let [move (choose-next-move {:board board :my-tile my-tile :my-turn my-turn})]
+              (println "next-move:##" move " my-tile: " my-tile " turn: " my-turn)
               (if (not (nil? move))
-                {:board (assoc-in board move my-tile)
-                       :my-tile my-tile :my-turn my-turn}
+                (assoc new-game :board (assoc-in board move my-tile))
+                ;{:board (assoc-in board move my-tile)
+                       ;:my-tile my-tile :my-turn my-turn}
                 nil)))))
-      ;:else (choose-next-move game))))
 
-(defn do-player-move [{:keys [board my-tile my-turn] :as game} move]
+(defn do-player-move [{:keys [board my-tile my-turn]} move]
+  (println "do-player-move move is:" move)
+  (println "board before next move:" board " tile: " my-tile " op-tile" (get-op-tile my-tile))
+  (println "Game before next move:" @game)
   ; check if it's a legal move, i.e. whether the coords are valid
-    (println "test" move (get-in board move) my-tile my-turn)
   (if (= "_" (get-in board move)) ; slot is empty ?
     ; fill in opponent play then do ours after that play
-    (let [outcome (next-move {:board (assoc-in board move my-tile) 
-                              :my-tile (get-op-tile my-tile) 
-                              :my-turn (get-op-turn my-turn)})]
-      (println (:board outcome))
+    ; XXX FIXME
+    (let [move-res (next-move {:board (assoc-in board move (get-op-tile my-tile))
+                               :my-tile my-tile :my-turn my-turn})]
+      (println "move result:" move-res)
+      (println "do-player-move move is:" move " game before swap:" @game)
+    (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
+    ;(do (swap! game #(conj % {:board (:board move-res) :my-tile my-tile :my-turn my-turn}))
+    ;(do (swap! game #(merge % (:board (next-move {:board (assoc-in board move 
+                                                          ;(get-op-tile my-tile))
+                                         ;:my-tile my-tile 
+                                         ;:my-turn my-turn}))))
       ; need to find out if there was a tie or a win etc..
-      (if (win? outcome)
-        (println "Sorry you lost. Me the Winnar!")
-        (do (println outcome) outcome)))
-    (println "Invalid board location: " (get-in board move) board move)))
+        (println "Game before win:" @game)
+        (println "do-player-move move is:" move)
+        (if (win? (:board @game))
+          (println "Sorry you lost. Me the Winnar!")
+          (do (println "No outcome yet. " @game) game "move:" move))))
+    (println "Invalid board location: contains:" (get-in board move) @game "move is:" move)))
 
 (defn print-help [&]
   (do
@@ -312,39 +344,40 @@
     (println "move: make a move. Pick coordinates [x y] of position to play")
     (println "quit: self explanatory, me thinks")))
 
-(defn print-board [game]
-  (println game))
+(defn print-board [&]
+  (println @game))
 
-(defn player-move [game arg]
-  (if (nil? game)
-    (println "No game started ? arg: " arg)
-    (let [move (clojure.edn/read-string (clojure.string/join " " arg))]
-      (println "Player-move: " move " game: " game " args: " arg)
+(defn player-move [& loc]
+  (println "player-move loc: " loc)
+  (if (empty? @game)
+    (println "No game started ? loc: " loc)
+    (let [move (clojure.edn/read-string (clojure.string/join " " loc))]
+      (println "Player-move: " move " game: " @game " locs: " loc)
       ; make sure player picked a proper spot on our board
       (if (and (vector? move)
                (= 2 (count move)) ; spot is 2 dimensional
                (#(< -1 % 3) (apply max move))) ; check range
-                  (do-player-move game move)
-        (do (println "No good" move game arg) move)))))
+                  (do-player-move @game move)
+        (do (println "No good" move @game loc) move)))))
 
 (defn start-new-game 
   "Create a new game (ref), and if we go first then do the first move"
-  [&]
-  (let [game (create-game)]
-    (if (= (:my-turn game) "First")
-      (first-move game)
-      game)))
+  []
+  (swap! game create-game)
+  (if (= (:my-turn @game) "First")
+    (swap! game first-move)
+    game))
 
-(def game-commands {"quit" (fn [game & args] (println "quitting"))
-                    "help" (fn [game & args] (do ((print-help) game)))
-                    "new"  (fn [game & args] (start-new-game))
-                    "info" (fn [game & args] ((println game) game))
-                    "move" (fn [game & args] (player-move game args))})
+(def game-commands {"quit" (fn [] (println "quitting"))
+                    "help" print-help
+                    "new"  start-new-game
+                    "info" (fn [] (println @game))
+                    "move" player-move})
 
-(defn execute [game player-input]
+(defn execute [player-input]
   (try (let [[command & args] (.split player-input " ")]
-         (do (println "Execute-Game: " game " player-input:" player-input " args:" args)
-         (apply (game-commands command) game args)))
+         (do (println "Execute-Game: " @game " player-input:" player-input " args:" args)
+         (apply (game-commands command) args)))
        (catch Exception e
          (.printStackTrace e (new java.io.PrintWriter *err*))
          "You can't do that!")))
