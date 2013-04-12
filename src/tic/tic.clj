@@ -5,15 +5,6 @@
 ; Our game is an atom
 (def game (atom {}))
 
-;(defn update-positions [{snake :snake, apple :apple, :as game}]
-  ;(if (eats? snake apple)
-    ;(merge game {:apple (create-apple) :snake (move snake :grow)})
-    ;(merge game {:snake (move snake)})))
-; END: update-positions
-
-;(defn update-direction [{snake :snake :as game} newdir]
-  ;(merge game {:snake (turn snake newdir)}))
-
 (defn create-game
   ([game] (create-game game 3))
   ([game size] (let [my-turn (rand-int 2)]
@@ -38,7 +29,6 @@
   (for [x (range size) y (range size) :when (= x y)] [x y]))
 
 (defn main-diag-values [board]
-  (println board)
   (for [[x y] (main-diagonal board (count board))] [((board x) y)]))
 
 (defn minor-diagonal [board size]
@@ -50,7 +40,6 @@
 ; returns true/false
 ; reduce returns nil is not all elements in row are equal
 (defn three-in-a-row [row]
-  (println "row" row)
   (not (nil? (reduce #(if (and (not (= %1 "_")) (= %1 %2)) %1 nil) row))))
 
 (defn check-board-matches 
@@ -305,8 +294,6 @@
               (println "next-move:##" move " my-tile: " my-tile " turn: " my-turn)
               (if (not (nil? move))
                 (assoc new-game :board (assoc-in board move my-tile))
-                ;{:board (assoc-in board move my-tile)
-                       ;:my-tile my-tile :my-turn my-turn}
                 nil)))))
 
 (defn do-player-move [{:keys [board my-tile my-turn]} move]
@@ -322,11 +309,6 @@
       (println "move result:" move-res)
       (println "do-player-move move is:" move " game before swap:" @game)
     (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
-    ;(do (swap! game #(conj % {:board (:board move-res) :my-tile my-tile :my-turn my-turn}))
-    ;(do (swap! game #(merge % (:board (next-move {:board (assoc-in board move 
-                                                          ;(get-op-tile my-tile))
-                                         ;:my-tile my-tile 
-                                         ;:my-turn my-turn}))))
       ; need to find out if there was a tie or a win etc..
         (println "Game before win:" @game)
         (println "do-player-move move is:" move)
@@ -345,7 +327,13 @@
     (println "quit: self explanatory, me thinks")))
 
 (defn print-board [&]
-  (println @game))
+  (printf "   | 0 | 1 | 2 |\n")
+  (printf "  --------------\n")
+  (loop [row-index 0]
+    (let [row ((:board @game) row-index)]
+      (when (< row-index (count row))
+        (printf "  %s| %s | %s | %s | %s\n" row-index (row 0) (row 1) (row 2) row-index)
+        (recur (inc row-index))))))
 
 (defn player-move [& loc]
   (println "player-move loc: " loc)
@@ -371,7 +359,7 @@
 (def game-commands {"quit" (fn [] (println "quitting"))
                     "help" print-help
                     "new"  start-new-game
-                    "info" (fn [] (println @game))
+                    "info" print-board
                     "move" player-move})
 
 (defn execute [player-input]
