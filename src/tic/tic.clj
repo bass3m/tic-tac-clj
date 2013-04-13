@@ -10,7 +10,7 @@
   ([game size] (let [my-turn (rand-int 2)]
                  (conj game {:board (vec (repeat size (vec (repeat size (identity "_")))))
                               ;:tile-values ["_" "X" "O"] ; perhaps a set is better here ?
-                              :size size
+                              ;:size size
                               ;:my-moves [] ; for future to keep track of history
                               ;:op-moves []
                               :my-tile (if (zero? my-turn) "X" "O")
@@ -330,8 +330,8 @@
   (printf "   | 0 | 1 | 2 |\n")
   (printf "  --------------\n")
   (loop [row-index 0]
-    (let [row ((:board @game) row-index)]
-      (when (< row-index (count row))
+    (when (< row-index (count (:board @game)))
+      (let [row ((:board @game) row-index)]
         (printf "  %s| %s | %s | %s | %s\n" row-index (row 0) (row 1) (row 2) row-index)
         (recur (inc row-index))))))
 
