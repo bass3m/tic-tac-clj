@@ -7,11 +7,6 @@
 ; save game state.
 ; play multiple games (i.e. accept multiple clients)
 
-;(def ^:dynamic *game*)
-
-;(def player-names (ref {}))
-;(def current-games (ref {}))
-
 (defn- cleanup []
   (println "Cleaning up"))
 
@@ -24,12 +19,6 @@
    ;(commute (:inhabitants @*current-room*)
             ;disj *player-name*)))
 
-;(defn- get-unique-player-name [name]
-  ;(if (@player-streams name)
-    ;(do (print "That name is in use; try again: ")
-        ;(flush)
-        ;(recur (read-line)))
-    ;name))
 
 (defn- main-game-loop [in out]
   (binding [*in* (reader in)
@@ -38,27 +27,16 @@
 
     ;; We have to nest this in another binding call instead of using
     ;; the one above so *in* and *out* will be bound to the socket
-    (print "\nWhat is your name? ") (flush)
-    ; add name to the create game
-    (let [player-name (read-line) game nil]
-      (println "\nWelcome " player-name)
-      (print-help) (print "> ") (flush)
+    (println "\nWelcome to Tic-Tac-Toe")
+    (print-help) (print "> ") (flush)
 
-      (try (loop [input (read-line)]
-             (when input
-               (println (execute input))
-               (.flush *err*)
-               (print "> ") (flush))
-               (recur (read-line)))
-           (finally (cleanup))))))
-
-      ;(try (loop [game nil]
-             ;(print "> ") (flush)
-             ;(when-let [input (read-line)]
-               ;(.flush *err*)
-               ;(println "loop-Game: " game " Input: " input)
-               ;(recur (execute game input))))
-           ;(finally (cleanup))))))
+    (try (loop [input (read-line)]
+      (when input
+        (println (execute input))
+        (.flush *err*)
+        (print "> ") (flush))
+        (recur (read-line)))
+      (finally (cleanup)))))
 
 (defn -main
   ([port-num]
