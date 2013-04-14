@@ -265,11 +265,15 @@
     ; XXX FIXME
     (let [move-res (next-move {:board (assoc-in board move (get-op-tile my-tile))
                                :my-tile my-tile :my-turn my-turn})]
-    (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
-      ; need to find out if there was a tie or a win etc..
-        (if (win? (:board @game))
-          (println "Sorry you lost. Me the Winnar!")
-          (do (println "No outcome yet. " @game) game "move:" move))))
+      (if (nil? move-res) ; no avail moves, must be a tie
+        (do (reset! game {:board (assoc-in board move (get-op-tile my-tile)) 
+                          :my-tile my-tile :my-turn my-turn})
+          (println "It's a tie."))
+        (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
+          ; need to find out if there was a tie or a win etc..
+          (if (win? (:board @game))
+            (println "Sorry you lost. Me the Winnar!")
+            (do (println "No outcome yet. " @game) game "move:" move)))))
     (println "Invalid board location: contains:" (get-in board move) @game "move is:" move)))
 
 (defn print-help [&]
