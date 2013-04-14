@@ -198,14 +198,17 @@
     (if (= my-turn "First")
       (cond
         ; prefer opposite corner if available
+        ; XXX FIXME bug here
         (not (empty? (set/intersection (into #{} my-played-corners)
-                                       (into #{} main-diag))))
+                                       (into #{} main-diag)
+                                       (into #{} avail-corners))))
           ; i'm on main diagonal, let's see if there's any available spots
           (first (set/intersection (into #{} avail-corners)
                                    (into #{} main-diag)))
         ; otherwise must be minor diagonal
         (not (empty? (set/intersection (into #{} my-played-corners)
-                                       (into #{} minor-diag))))
+                                       (into #{} minor-diag)
+                                       (into #{} avail-corners))))
           ; i'm on minor diagonal, let's see if there's any available spots
           (first (set/intersection (into #{} avail-corners)
                                    (into #{} minor-diag)))
@@ -291,7 +294,7 @@
   (loop [row-index 0]
     (when (< row-index (count (:board @game)))
       (let [row ((:board @game) row-index)]
-        (printf "  %s| %s | %s | %s | %s\n" row-index (row 0) (row 1) (row 2) row-index)
+        (printf "  %s| %s | %s | %s |\n" row-index (row 0) (row 1) (row 2))
         (recur (inc row-index))))))
 
 (defn player-move [& loc]
