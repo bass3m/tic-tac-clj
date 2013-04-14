@@ -9,10 +9,6 @@
   ([game] (create-game game 3))
   ([game size] (let [my-turn (rand-int 2)]
                  (conj game {:board (vec (repeat size (vec (repeat size (identity "_")))))
-                              ;:tile-values ["_" "X" "O"] ; perhaps a set is better here ?
-                              ;:size size
-                              ;:my-moves [] ; for future to keep track of history
-                              ;:op-moves []
                               :my-tile (if (zero? my-turn) "X" "O")
                               :my-turn (if (zero? my-turn) "First" "Second")}))))
 
@@ -46,32 +42,15 @@
   "Check for 3 in a row matches in rows/columns/diagonals"
   [board]
   (cond
-    (not (every? empty? (filter three-in-a-row (get-columns board)))) (do (println "col") true)
-    (not (every? empty? (filter three-in-a-row board))) (do (println "row") true)
+    (not (every? empty? (filter three-in-a-row (get-columns board)))) true
+    (not (every? empty? (filter three-in-a-row board))) true
     ; there is only 1 major diagonal and 1 minor diagonal
-    (three-in-a-row (vec (flatten (main-diag-values board)))) (do (println "main") true)
-    (three-in-a-row (vec (flatten (minor-diag-values board)))) (do (println "minor") true)
+    (three-in-a-row (vec (flatten (main-diag-values board)))) true
+    (three-in-a-row (vec (flatten (minor-diag-values board)))) true
     :else false))
 
 (defn win? [board]
-  (println "win? board: " board)
   (check-board-matches board))
-
-; ugh, or
-; (assoc-in gm [0 1] "x")
-; [[0 "x" 2] [3 4 5] [6 7 8]]
-
-; modified from Joy of Clojure to include diagonals
-(defn neighbors
-  ([size yx] (neighbors [[-1 0] [1 0] [0 -1] [0 1]
-                         [1 1] [-1 -1] [-1 1] [1 -1]] size yx))
-  ([deltas size yx]
-   (filter (fn [new-yx]
-             (every? #(< -1 % size) new-yx))
-           (map #(vec (map + yx %)) deltas))))
-
-;(map #(get-in gm %) (neighbors 3 [0 0]))
-;=> (3 1 4)
 
 (defn get-row-two-matches [i [x y z]]
   (cond
@@ -115,14 +94,6 @@
   (flatten (cons (keep-indexed get-row-two-matches board)
                  (keep-indexed get-colm-two-matches (get-columns board)))))
 
-; get the two i a row neighbors for this location
-(defn get-two-in-a-row [board x y]
-   (let [current-tile ((board x) y)
-         my-neighbors (neighbors (count board) [x y])]
-     (filter #(and (= current-tile (get-in board %))
-                   (or (= current-tile "X")
-                       (= current-tile "O"))) my-neighbors)))
-
 ; XXX this assumes a size 3 board, but what do you do for larger ?
 (defn get-center [board]
   ((board 1) 1))
@@ -155,12 +126,6 @@
                               (update-in player-moves [tile]
                                          (partial cons
                                                   (with-meta loc (meta move)))))))))
-
-; return all the two-in-a-rows on the board
-(defn get-board-two-in-a-rows [board]
-  (for [x (range (count board)) y (range (count board))
-        :when (not (empty? (get-two-in-a-row board x y)))]
-    {:tile ((board x) y) :loc [x y]}))
 
 (defn win-game
   "Win game. We'll use the metadata to make life easier. Returns filled board."
@@ -204,9 +169,7 @@
 
 (defn first-move 
   "Do the first move"
-  ;[game]
   [{:keys [board my-tile my-turn]}]
-  ;(let [board (:board @game) my-tile (:my-tile @game) my-turn (:my-turn @game)]
   ; i go first ?
     (if (= my-turn "First")
       ; this is the first move, the optimal move is to choose a corner
@@ -291,27 +254,19 @@
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
       :else (let [move (choose-next-move {:board board :my-tile my-tile :my-turn my-turn})]
-              (println "next-move:##" move " my-tile: " my-tile " turn: " my-turn)
               (if (not (nil? move))
                 (assoc new-game :board (assoc-in board move my-tile))
                 nil)))))
 
 (defn do-player-move [{:keys [board my-tile my-turn]} move]
-  (println "do-player-move move is:" move)
-  (println "board before next move:" board " tile: " my-tile " op-tile" (get-op-tile my-tile))
-  (println "Game before next move:" @game)
   ; check if it's a legal move, i.e. whether the coords are valid
   (if (= "_" (get-in board move)) ; slot is empty ?
     ; fill in opponent play then do ours after that play
     ; XXX FIXME
     (let [move-res (next-move {:board (assoc-in board move (get-op-tile my-tile))
                                :my-tile my-tile :my-turn my-turn})]
-      (println "move result:" move-res)
-      (println "do-player-move move is:" move " game before swap:" @game)
     (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
       ; need to find out if there was a tie or a win etc..
-        (println "Game before win:" @game)
-        (println "do-player-move move is:" move)
         (if (win? (:board @game))
           (println "Sorry you lost. Me the Winnar!")
           (do (println "No outcome yet. " @game) game "move:" move))))
@@ -336,7 +291,6 @@
         (recur (inc row-index))))))
 
 (defn player-move [& loc]
-  (println "player-move loc: " loc)
   (if (empty? @game)
     (println "No game started ? loc: " loc)
     (let [move (clojure.edn/read-string (clojure.string/join " " loc))]
