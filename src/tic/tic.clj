@@ -198,17 +198,18 @@
     (if (= my-turn "First")
       (cond
         ; prefer opposite corner if available
-        ; XXX FIXME bug here
-        (not (empty? (set/intersection (into #{} my-played-corners)
-                                       (into #{} main-diag)
-                                       (into #{} avail-corners))))
+        (and (not (empty? (set/intersection (into #{} my-played-corners)
+                                            (into #{} main-diag))))
+             (not (empty? (set/intersection (into #{} main-diag)
+                                            (into #{} avail-corners)))))
           ; i'm on main diagonal, let's see if there's any available spots
           (first (set/intersection (into #{} avail-corners)
                                    (into #{} main-diag)))
         ; otherwise must be minor diagonal
-        (not (empty? (set/intersection (into #{} my-played-corners)
-                                       (into #{} minor-diag)
-                                       (into #{} avail-corners))))
+        (and (not (empty? (set/intersection (into #{} my-played-corners)
+                                            (into #{} minor-diag))))
+             (not (empty? (set/intersection (into #{} minor-diag)
+                                            (into #{} avail-corners)))))
           ; i'm on minor diagonal, let's see if there's any available spots
           (first (set/intersection (into #{} avail-corners)
                                    (into #{} minor-diag)))
@@ -253,6 +254,13 @@
         (assoc new-game :board (block 
                                  {:board board :my-tile my-tile :my-turn my-turn}
                                  op-2-in-a-rows op-diag-matches))
+      ; if this is my first move then we're going second then play defense.
+      ; what's happening here, is that we count the number of empty positions
+      ; and if there equal to 1 minus our total then we know this is our first
+      ; move.  With our turn being "Second"
+      (= (- (* (count board) (count board)) 1) 
+         (reduce #(if (= %2 "_") (+ 1 %1) %1) 0 (flatten board)))
+        (first-move {:board board :my-tile my-tile :my-turn my-turn})
       ; fork works if i started first and opp played a corner in response
       ; to my corner, leaving center empty. I can then fork by playing
       ; another corner which will lead to me winning
@@ -265,7 +273,6 @@
   ; check if it's a legal move, i.e. whether the coords are valid
   (if (= "_" (get-in board move)) ; slot is empty ?
     ; fill in opponent play then do ours after that play
-    ; XXX FIXME
     (let [move-res (next-move {:board (assoc-in board move (get-op-tile my-tile))
                                :my-tile my-tile :my-turn my-turn})]
       (if (nil? move-res) ; no avail moves, must be a tie
@@ -299,9 +306,8 @@
 
 (defn player-move [& loc]
   (if (empty? @game)
-    (println "No game started ? loc: " loc)
+    (println "No game started yet ? Please start a new game.")
     (let [move (clojure.edn/read-string (clojure.string/join " " loc))]
-      (println "Player-move: " move " game: " @game " locs: " loc)
       ; make sure player picked a proper spot on our board
       (if (and (vector? move)
                (= 2 (count move)) ; spot is 2 dimensional
@@ -325,8 +331,7 @@
 
 (defn execute [player-input]
   (try (let [[command & args] (.split player-input " ")]
-         (do (println "Execute-Game: " @game " player-input:" player-input " args:" args)
-         (apply (game-commands command) args)))
+         (apply (game-commands command) args))
        (catch Exception e
          (.printStackTrace e (new java.io.PrintWriter *err*))
          "You can't do that!")))

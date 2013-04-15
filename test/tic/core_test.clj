@@ -34,20 +34,29 @@
 ; our first move is corner
 (deftest test-first-move-1
   (is (= (first-move {:board tm1 :my-tile "X" :my-turn "First"})
-         '[["X" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]])))
+         '{:board [["X" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]], :my-tile "X", :my-turn "First"})))
 
 ; test that when out turn is second, our first move is corner
 ; if op takes center
 (deftest test-first-move-2
   (let [board (assoc-in tm1 [1 1] "X")]
     (is (= (first-move {:board board :my-tile "O" :my-turn "Second"})
-           '[["O" "_" "_"] ["_" "X" "_"] ["_" "_" "_"]]))))
+         '{:board [["O" "_" "_"] ["_" "X" "_"] ["_" "_" "_"]], :my-tile "O", :my-turn "Second"}))))
 
 ; if op takes corner, we take center
 (deftest test-first-move-3
   (let [board (assoc-in tm1 [0 0] "X")]
     (is (= (first-move {:board board :my-tile "O" :my-turn "Second"})
-           '[["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]]))))
+          '{:board [["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]], :my-tile "O", :my-turn "Second"}))))
+
+(def tm11 [["X" "_" "_"]
+           ["_" "_" "_"]
+           ["_" "_" "_"]])
+
+(deftest test-next-move-4
+  (let [board (assoc-in tm11 [2 2] "O")]
+    (is (= (next-move {:board board :my-tile "X" :my-turn "First"})
+          '{:board [["X" "_" "X"] ["_" "_" "_"] ["_" "_" "O"]], :my-tile "X", :my-turn "First"}))))
 
 ; test played cornes
 (deftest test-played-corners-1
@@ -156,22 +165,26 @@
 ; test rows
 (deftest test-win1
   (is (= (next-move {:board gm3 :my-tile "X" :my-turn "First"})
-         [["X" "X" "X"] ["_" "O" "_"] ["O" "_" "_"]])))
+         {:board [["X" "X" "X"] ["_" "O" "_"] ["O" "_" "_"]]
+          :my-tile "X", :my-turn "First"})))
 
 ; test columns
 (deftest test-win2
   (is (= (next-move {:board gm4 :my-tile "X" :my-turn "First"})
-         [["X" "_" "O"] ["X" "O" "_"] ["X" "_" "_"]])))
+         {:board [["X" "_" "O"] ["X" "O" "_"] ["X" "_" "_"]]
+          :my-tile "X", :my-turn "First"})))
 
 ; test major diag
 (deftest test-win3
   (is (= (next-move {:board gm9 :my-tile "O" :my-turn "First"})
-         [["O" "_" "X"] ["X" "O" "X"] ["X" "_" "O"]])))
+         {:board [["O" "_" "X"] ["X" "O" "X"] ["X" "_" "O"]]
+          :my-tile "O", :my-turn "First"})))
 
 ; test minor diag
 (deftest test-win4
   (is (= (next-move {:board gm3 :my-tile "O" :my-turn "First"})
-         [["X" "X" "O"] ["_" "O" "_"] ["O" "_" "_"]])))
+         {:board [["X" "X" "O"] ["_" "O" "_"] ["O" "_" "_"]]
+          :my-tile "O", :my-turn "First"})))
 
 (def gm7 [["O" "O" "_"]
           ["X" "_" "_"]
@@ -180,12 +193,14 @@
 ; test blocking rows
 (deftest test-block1
   (is (= (next-move {:board gm7 :my-tile "X" :my-turn "First"})
-         [["O" "O" "X"] ["X" "_" "_"] ["X" "_" "_"]])))
+         {:board [["O" "O" "X"] ["X" "_" "_"] ["X" "_" "_"]]
+          :my-tile "X", :my-turn "First"})))
 
 ; test columns
 (deftest test-block2
   (is (= (next-move {:board gm4 :my-tile "O" :my-turn "First"})
-         [["X" "_" "O"] ["O" "O" "_"] ["X" "_" "_"]])))
+         {:board [["X" "_" "O"] ["O" "O" "_"] ["X" "_" "_"]]
+          :my-tile "O", :my-turn "First"})))
 
 (def gm8 [["O" "_" "_"]
           ["X" "O" "X"]
@@ -194,7 +209,8 @@
 ; test major diag
 (deftest test-block3
   (is (= (next-move {:board gm8 :my-tile "X" :my-turn "First"})
-         [["O" "_" "_"] ["X" "O" "X"] ["_" "_" "X"]])))
+         {:board [["O" "_" "_"] ["X" "O" "X"] ["_" "_" "X"]]
+          :my-tile "X", :my-turn "First"})))
 
 (def tm5 [["X" "_" "O"]
           ["_" "O" "_"]
@@ -203,19 +219,20 @@
 ; test minor diag
 (deftest test-block4
   (is (= (next-move {:board tm5 :my-tile "X" :my-turn "First"})
-         [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]])))
+         {:board [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]]
+          :my-tile "X", :my-turn "First"})))
 
 ; test new game
-(deftest test-execute-commands1
-  (let [res (execute nil "new")]
-    (is (= (:board res)
-           [["_" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]]))))
+;(deftest test-execute-commands1
+  ;(let [res (execute "new")]
+    ;(is (= (:board res)
+           ;[["_" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]]))))
 
 ; test command execution
-(deftest test-execute-commands2
-  (let [res (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")]
-    (is (= (:board res)
-           [["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]]))))
+;(deftest test-execute-commands2
+  ;(let [res (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")]
+    ;(is (= (:board res)
+           ;[["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]]))))
 
 ;(deftest test-execute-commands2
   ;(is (= (execute gm9 "move [1 2 3]")
