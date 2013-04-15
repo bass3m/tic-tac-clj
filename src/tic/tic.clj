@@ -6,6 +6,7 @@
 (def game (atom {}))
 
 (defn create-game
+  "Create a new game with 3x3 board, randomize who starts first."
   ([game] (create-game game 3))
   ([game size] (let [my-turn (rand-int 2)]
                  (conj game {:board (vec (repeat size (vec (repeat size (identity "_")))))
@@ -224,6 +225,9 @@
       (cond
         ; we're going second, pick center first
         (= "_" (get-center board)) [1 1]
+        ; if center is taken by op then pick corner, else pick side
+        (and (not (empty? avail-corners)) 
+             (= (get-op-tile my-tile) (get-center board))) (first avail-corners)
         ; defend against forks by picking a side
         (not (empty? avail-sides)) (first avail-sides)
         ; else choose an availble corner
@@ -282,8 +286,9 @@
         (do (reset! game {:board (:board move-res) :my-tile my-tile :my-turn my-turn})
           ; need to find out if there was a tie or a win etc..
           (if (win? (:board @game))
-            (println "Sorry you lost. Me the Winnar!")
-            (do (println "No outcome yet. " @game) game "move:" move)))))
+            ; FIXME tell who won.
+            (println "Sorry you lost!")
+            move))))
     (println "Invalid board location: contains:" (get-in board move) @game "move is:" move)))
 
 (defn print-help [&]
