@@ -7,19 +7,11 @@
 ; save game state.
 ; play multiple games (i.e. accept multiple clients)
 
-(defn- cleanup []
-  (println "Cleaning up"))
+(defn- quit []
+  (println "Quitting"))
 
-;(defn- cleanup []
-  ;"Drop all inventory and remove player from room and player list."
-  ;(dosync
-   ;(doseq [item @*inventory*]
-     ;(discard item))
-   ;(commute player-streams dissoc *player-name*)
-   ;(commute (:inhabitants @*current-room*)
-            ;disj *player-name*)))
-
-
+; main logic here is heavely influenced by the fun clojure screencast
+; by peepcode.  https://peepcode.com/products/functional-programming-with-clojure
 (defn- main-game-loop [in out]
   (binding [*in* (reader in)
             *out* (writer out)
@@ -36,7 +28,7 @@
         (.flush *err*)
         (print "> ") (flush))
         (recur (read-line)))
-      (finally (cleanup)))))
+      (finally (quit)))))
 
 (defn -main
   ([port-num]

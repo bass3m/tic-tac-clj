@@ -221,19 +221,3 @@
   (is (= (next-move {:board tm5 :my-tile "X" :my-turn "First"})
          {:board [["X" "_" "O"] ["_" "O" "_"] ["X" "_" "X"]]
           :my-tile "X", :my-turn "First"})))
-
-; test new game
-;(deftest test-execute-commands1
-  ;(let [res (execute "new")]
-    ;(is (= (:board res)
-           ;[["_" "_" "_"] ["_" "_" "_"] ["_" "_" "_"]]))))
-
-; test command execution
-;(deftest test-execute-commands2
-  ;(let [res (execute {:board tm1 :my-tile "X" :my-turn "First"} "move [0 0]")]
-    ;(is (= (:board res)
-           ;[["X" "_" "_"] ["_" "O" "_"] ["_" "_" "_"]]))))
-
-;(deftest test-execute-commands2
-  ;(is (= (execute gm9 "move [1 2 3]")
-         ;(str "moving [1 2 3]"))))
