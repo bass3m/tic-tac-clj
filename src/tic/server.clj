@@ -24,7 +24,7 @@
 
     (try (loop [input (read-line)]
       (when input
-        (println (execute input))
+        (execute input)
         (.flush *err*)
         (print "> ") (flush))
         (recur (read-line)))
