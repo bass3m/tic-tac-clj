@@ -293,17 +293,19 @@
 
 (defn print-help [&]
   (do
-    (println "Commands: help, move, info, new (create new game), quit")
+    (println "Commands: help, move, info, new (create new game):")
     (println " new: start a new game")
     (println "info: displays game info")
     (println "help: prints this super helpful message")
-    (println "move: make a move. Pick coordinates [x y] of position to play")
-    (println "quit: self explanatory, me thinks")))
+    (println "move: make a move. Pick coordinates [x y] of position to play")))
 
 (defn print-board [&]
-  (println)
-  (println "Computer's Turn: " (:my-turn @game) 
-           " Computer's using: " (:my-tile @game))
+  ; hacky, but using juxt is fun
+  (println (clojure.string/join (take (second
+                                        ((juxt println count)
+                                         (format "Computer's Turn: %s Computer's using: %s"  
+                                                 (:my-turn @game)(:my-tile @game))))
+                                      (repeat "="))))
   (printf "   | 0 | 1 | 2 |\n")
   (printf "  --------------\n")
   (loop [row-index 0]
@@ -328,9 +330,10 @@
   "Create a new game (ref), and if we go first then do the first move"
   []
   (swap! game create-game)
-  (if (= (:my-turn @game) "First")
-    (swap! game first-move)
-    game))
+  (do (if (= (:my-turn @game) "First")
+        (swap! game first-move)
+        game)
+      (print-board)))
 
 (def game-commands {"quit" (fn [] (println "quitting"))
                     "help" print-help
