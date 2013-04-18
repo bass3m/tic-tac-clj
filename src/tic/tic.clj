@@ -301,6 +301,9 @@
     (println "quit: self explanatory, me thinks")))
 
 (defn print-board [&]
+  (println)
+  (println "Computer's Turn: " (:my-turn @game) 
+           " Computer's using: " (:my-tile @game))
   (printf "   | 0 | 1 | 2 |\n")
   (printf "  --------------\n")
   (loop [row-index 0]
@@ -317,7 +320,8 @@
       (if (and (vector? move)
                (= 2 (count move)) ; spot is 2 dimensional
                (#(< -1 % 3) (apply max move))) ; check range
-                  (do-player-move @game move)
+                  (do (do-player-move @game move)
+                      (print-board))
         (do (println "No good" move @game loc) move)))))
 
 (defn start-new-game 
