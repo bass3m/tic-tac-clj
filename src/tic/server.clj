@@ -10,7 +10,7 @@
 (defn- quit []
   (println "Quitting"))
 
-; main logic here is heavely influenced by the fun clojure screencast
+; main logic here is heavily influenced by the fun clojure screencast
 ; by peepcode.  https://peepcode.com/products/functional-programming-with-clojure
 (defn- main-game-loop [in out]
   (binding [*in* (reader in)
