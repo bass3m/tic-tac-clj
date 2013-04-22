@@ -1,5 +1,5 @@
 (ns tic.server
-  (:use [tic.tic :only [create-game print-help execute]]) 
+  (:use [tic.tic :only [create-game print-help execute game]]) 
   (:use [clojure.java.io :only [reader writer]]
         [server.socket :only [create-server]]))
 
@@ -23,11 +23,12 @@
     (print-help) (print "> ") (flush)
 
     (try (loop [input (read-line)]
-      (when input
-        (execute input)
-        (.flush *err*)
-        (print "> ") (flush))
-        (recur (read-line)))
+           ; when has an implicit do
+           (when (and input (nil? (:quit @game)))
+             (execute input)
+             (.flush *err*)
+             (print "> ") (flush))
+           (recur (read-line)))
       (finally (quit)))))
 
 (defn -main

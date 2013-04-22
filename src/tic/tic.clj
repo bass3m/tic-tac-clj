@@ -10,8 +10,8 @@
   ([game] (create-game game 3))
   ([game size] (let [my-turn (rand-int 2)]
                  (conj game {:board (vec (repeat size (vec (repeat size (identity "_")))))
-                              :my-tile (if (zero? my-turn) "X" "O")
-                              :my-turn (if (zero? my-turn) "First" "Second")}))))
+                             :my-tile (if (zero? my-turn) "X" "O")
+                             :my-turn (if (zero? my-turn) "First" "Second")}))))
 
 (defn get-op-tile [my-tile]
   (if (= my-tile "X") "O" "X"))
@@ -95,7 +95,7 @@
   (flatten (cons (keep-indexed get-row-two-matches board)
                  (keep-indexed get-colm-two-matches (get-columns board)))))
 
-; XXX this assumes a size 3 board, but what do you do for larger ?
+; XXX this assumes a size 3 board
 (defn get-center [board]
   ((board 1) 1))
 
@@ -295,6 +295,7 @@
   (do
     (println "Commands: help, move, info, new (create new game):")
     (println " new: start a new game")
+    (println "quit: quit game")
     (println "info: displays game info")
     (println "help: prints this super helpful message")
     (println "move: make a move. Pick coordinates [x y] of position to play")))
@@ -335,7 +336,13 @@
         game)
       (print-board)))
 
-(def game-commands {"quit" (fn [] (println "quitting"))
+(defn quit-game
+  "Quit game."
+  []
+  (do (swap! game #(merge % {:quit true}))
+      (System/exit 0)))
+
+(def game-commands {"quit" quit-game
                     "help" print-help
                     "new"  start-new-game
                     "info" print-board
@@ -346,5 +353,5 @@
          (apply (game-commands command) args))
        (catch Exception e
          (.printStackTrace e (new java.io.PrintWriter *err*))
-         "You can't do that!")))
+         "Unrecognized command. Please try again.")))
 
